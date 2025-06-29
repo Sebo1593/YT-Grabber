@@ -11,6 +11,7 @@ class YouTubeTranscriptExtractor {
     this.setupMessageListener();
     await this.loadButtonSettings();
     this.setupStorageListener();
+    this.setupFullscreenListener();
     this.waitForPageLoad();
     this.setupNavigationListener();
   }
@@ -73,12 +74,30 @@ class YouTubeTranscriptExtractor {
     });
   }
 
+  setupFullscreenListener() {
+    document.addEventListener('fullscreenchange', () => {
+      const btn = document.getElementById('transcript-summary-btn');
+      if (!btn) return;
+      if (document.fullscreenElement) {
+        btn.style.display = 'none';
+      } else {
+        btn.style.display = 'flex';
+      }
+    });
+  }
+
   getPositionStyles() {
     switch (this.buttonPosition) {
       case 'top-right':
         return 'top: 20px !important; right: 20px !important;';
+      case 'top-left':
+        return 'top: 20px !important; left: 20px !important;';
       case 'bottom-right':
         return 'bottom: 20px !important; right: 20px !important;';
+      case 'bottom-left':
+        return 'bottom: 20px !important; left: 20px !important;';
+      case 'middle-left':
+        return 'top: 80px !important; left: 20px !important;';
       case 'middle-right':
       default:
         return 'top: 80px !important; right: 20px !important;';
