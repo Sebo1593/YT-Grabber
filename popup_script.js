@@ -52,9 +52,9 @@ document.addEventListener('DOMContentLoaded', function() {
 // Modele dla różnych platform
 const models = {
   chatgpt: [
-    { value: 'gpt-4o', text: 'GPT-4o (Najlepszy dla większości zadań)' },
-    { value: 'o1', text: 'o1 (Zaawansowane rozumowanie)' },
-    { value: 'gpt-4o-mini', text: 'GPT-4o mini (Szybki i ekonomiczny)' }
+    { value: 'gpt-4o', text: 'GPT-4o (najnowszy)' },
+    { value: 'gpt-4-turbo', text: 'GPT-4 Turbo' },
+    { value: 'gpt-3.5-turbo', text: 'GPT-3.5 Turbo (szybki i tani)' }
   ],
   claude: [
     { value: 'claude-3-5-sonnet', text: 'Claude 3.5 Sonnet (Najnowszy)' },

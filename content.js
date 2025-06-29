@@ -363,9 +363,9 @@ class YouTubeTranscriptExtractor {
           background: white;
           cursor: pointer;
         ">
-          <option value="gpt-4o">GPT-4o (Najlepszy)</option>
-          <option value="o1">o1 (Rozumowanie)</option>
-          <option value="gpt-4o-mini">GPT-4o mini (Szybki)</option>
+          <option value="gpt-4o">GPT-4o (Najnowszy)</option>
+          <option value="gpt-4-turbo">GPT-4 Turbo</option>
+          <option value="gpt-3.5-turbo">GPT-3.5 Turbo (Szybki)</option>
         </select>
       </div>
 
