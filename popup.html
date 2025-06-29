@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ZT-Youtube</title>
-  <link rel="stylesheet" href="popup-styles.css">
+  <link rel="stylesheet" href="popup_styles.css">
 </head>
 <body>
   <div class="header">
@@ -35,9 +35,8 @@
     <div class="model-selection" id="model-selection">
       <label for="model-select">Domyślny model:</label>
       <select id="model-select">
-        <option value="gpt-4o">GPT-4o (Najlepszy dla większości zadań)</option>
-        <option value="o1">o1 (Zaawansowane rozumowanie)</option>
-        <option value="gpt-4o-mini">GPT-4o mini (Szybki i ekonomiczny)</option>
+        <option value="gpt-4o">GPT-4o (najnowszy)</option>
+        <option value="o3">o3 (szybki)</option>
       </select>
     </div>
   </div>
@@ -76,6 +75,27 @@
         <span class="setting-label">Automatyczne wysyłanie (Enter)</span>
         <div class="setting-toggle active" id="auto-send-toggle"></div>
       </div>
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <h3>🔧 Wygląd przycisku</h3>
+    <div class="form-group">
+      <label for="button-position">Pozycja przycisku:</label>
+      <select id="button-position">
+        <option value="top-right">Prawy górny róg</option>
+        <option value="middle-right">Niżej po prawej</option>
+        <option value="bottom-right">Prawy dolny róg</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="button-style">Styl przycisku:</label>
+      <select id="button-style">
+        <option value="gradient">Gradient (domyślny)</option>
+        <option value="gray">Szary</option>
+        <option value="dark">Ciemny</option>
+        <option value="outline">Obramowanie</option>
+      </select>
     </div>
   </div>
 
@@ -128,6 +148,6 @@
     <p>ZT-Youtube - Analizuj YouTube z AI</p>
   </div>
 
-  <script src="popup-script.js"></script>
+  <script src="popup_script.js"></script>
 </body>
 </html>
