@@ -690,17 +690,17 @@ class YouTubeTranscriptExtractor {
   async getTranscriptFromWindowData() {
     try {
       if (typeof window.ytInitialData === 'undefined') return null;
-      
+
       const videoId = this.extractVideoId();
       if (!videoId) return null;
 
       const searchForCaptions = (obj) => {
         if (!obj || typeof obj !== 'object') return null;
-        
-        if (obj.captionTracks && Array.isArray(obj.captionTracks)) {
-          return obj.captionTracks;
+
+        if (obj.playerCaptionsTracklistRenderer) {
+          return obj.playerCaptionsTracklistRenderer;
         }
-        
+
         for (const key in obj) {
           if (obj.hasOwnProperty(key)) {
             const result = searchForCaptions(obj[key]);
@@ -710,10 +710,13 @@ class YouTubeTranscriptExtractor {
         return null;
       };
 
-      const captionTracks = searchForCaptions(window.ytInitialData);
-      if (!captionTracks || captionTracks.length === 0) return null;
+      const captionData = searchForCaptions(window.ytInitialData);
+      if (!captionData || !captionData.captionTracks) return null;
 
-      return await this.fetchTranscriptFromTracks(captionTracks);
+      return await this.fetchTranscriptFromTracks(
+        captionData.captionTracks,
+        captionData.translationLanguages
+      );
     } catch (error) {
       console.error('Błąd w getTranscriptFromWindowData:', error);
       return null;
@@ -726,9 +729,11 @@ class YouTubeTranscriptExtractor {
       if (!videoId) return null;
 
       if (window.ytInitialPlayerResponse) {
-        const captions = window.ytInitialPlayerResponse?.captions?.playerCaptionsTracklistRenderer?.captionTracks;
+        const renderer = window.ytInitialPlayerResponse?.captions?.playerCaptionsTracklistRenderer;
+        const captions = renderer?.captionTracks;
+        const translations = renderer?.translationLanguages;
         if (captions && captions.length > 0) {
-          return await this.fetchTranscriptFromTracks(captions);
+          return await this.fetchTranscriptFromTracks(captions, translations);
         }
       }
 
@@ -740,9 +745,11 @@ class YouTubeTranscriptExtractor {
           if (matches && matches[1]) {
             try {
               const playerResponse = JSON.parse(matches[1]);
-              const captions = playerResponse?.captions?.playerCaptionsTracklistRenderer?.captionTracks;
+              const renderer = playerResponse?.captions?.playerCaptionsTracklistRenderer;
+              const captions = renderer?.captionTracks;
+              const translations = renderer?.translationLanguages;
               if (captions && captions.length > 0) {
-                return await this.fetchTranscriptFromTracks(captions);
+                return await this.fetchTranscriptFromTracks(captions, translations);
               }
             } catch (e) {
               continue;
@@ -758,26 +765,29 @@ class YouTubeTranscriptExtractor {
     }
   }
 
-  async fetchTranscriptFromTracks(captionTracks) {
+  async fetchTranscriptFromTracks(captionTracks, translationLanguages = []) {
     try {
       console.log('📝 Znalezione napisy:', captionTracks.map(c => c.languageCode || c.vssId));
 
       // Preferuj polski, potem angielski
       const preferredLanguages = [
         'pl', 'pl-PL', 'pl-pl',
-        'en', 'en-US', 'en-GB', 'en-us', 'en-gb',
-        'a.pl', 'a.en', 'a.en-US', 'a.en-GB'
+        'en', 'en-US', 'en-GB', 'en-us', 'en-gb'
       ];
 
       let selectedCaption = null;
 
       for (const lang of preferredLanguages) {
-        selectedCaption = captionTracks.find(caption => 
-          caption.languageCode === lang || 
-          caption.vssId === lang ||
-          caption.vssId === `a.${lang}` ||
-          caption.vssId === `${lang}.${this.extractVideoId()}`
-        );
+        const lower = lang.toLowerCase();
+        selectedCaption = captionTracks.find(caption => {
+          const code = (caption.languageCode || '').toLowerCase();
+          const vss = (caption.vssId || '').toLowerCase();
+          return code === lower ||
+                 vss === lower ||
+                 vss.startsWith(`${lower}.`) ||
+                 vss.startsWith(`a.${lower}`) ||
+                 vss.startsWith(`a.${lower}.`);
+        });
         if (selectedCaption) {
           console.log(`🎯 Wybrano napisy: ${selectedCaption.languageCode || selectedCaption.vssId}`);
           break;
@@ -789,9 +799,21 @@ class YouTubeTranscriptExtractor {
         console.log(`📋 Użyto pierwszych dostępnych napisów: ${selectedCaption.languageCode || selectedCaption.vssId}`);
       }
 
-      if (!selectedCaption.baseUrl) return null;
+      let captionUrl = selectedCaption.baseUrl;
 
-      const response = await fetch(selectedCaption.baseUrl);
+      // Jeśli wybrany caption nie jest w języku polskim, sprawdź dostępność automatycznego tłumaczenia
+      const hasPolishTranslation =
+        Array.isArray(translationLanguages) &&
+        translationLanguages.some(t => (t.languageCode || '').toLowerCase().startsWith('pl'));
+
+      if (!preferredLanguages.slice(0, 3).some(l => (selectedCaption.languageCode || '').toLowerCase().startsWith(l.toLowerCase())) && hasPolishTranslation && selectedCaption.isTranslatable) {
+        captionUrl = `${selectedCaption.baseUrl}&tlang=pl`;
+        console.log('🌐 Użyto automatycznego tłumaczenia na polski');
+      }
+
+      if (!captionUrl) return null;
+
+      const response = await fetch(captionUrl);
       if (!response.ok) {
         console.error('Błąd pobierania transkrypcji:', response.status);
         return null;
