@@ -762,34 +762,61 @@ class YouTubeTranscriptExtractor {
     try {
       console.log('📝 Znalezione napisy:', captionTracks.map(c => c.languageCode || c.vssId));
 
-      // Preferuj polski, potem angielski
-      const preferredLanguages = [
-        'pl', 'pl-PL', 'pl-pl',
-        'en', 'en-US', 'en-GB', 'en-us', 'en-gb'
-      ];
-
       let selectedCaption = null;
 
-      for (const lang of preferredLanguages) {
-        const lower = lang.toLowerCase();
-        selectedCaption = captionTracks.find(caption => {
-          const code = (caption.languageCode || '').toLowerCase();
-          const vss = (caption.vssId || '').toLowerCase();
-          return code === lower ||
-                 vss === lower ||
-                 vss.startsWith(`${lower}.`) ||
-                 vss.startsWith(`a.${lower}`) ||
-                 vss.startsWith(`a.${lower}.`);
-        });
-        if (selectedCaption) {
-          console.log(`🎯 Wybrano napisy: ${selectedCaption.languageCode || selectedCaption.vssId}`);
-          break;
-        }
+      // Dodaj DEBUGGING - aby zobaczyć wszystkie dostępne napisy
+      console.log('🔍 DEBUGGING - Wszystkie dostępne napisy:');
+      captionTracks.forEach((caption, index) => {
+        console.log(`${index}: languageCode="${caption.languageCode}" vssId="${caption.vssId}"`);
+      });
+
+      // Funkcja sprawdzająca czy napisy są polskie
+      function isPolishCaption(caption) {
+        const code = (caption.languageCode || '').toLowerCase();
+        const vss = (caption.vssId || '').toLowerCase();
+
+        if (code.includes('pl')) return true;
+        if (vss.includes('pl')) return true;
+        if (vss.startsWith('a.pl')) return true;
+        if (vss.includes('.pl.')) return true;
+        if (vss.includes('.pl')) return true;
+        if (vss.endsWith('.pl')) return true;
+
+        return false;
       }
 
-      if (!selectedCaption) {
-        selectedCaption = captionTracks[0];
-        console.log(`📋 Użyto pierwszych dostępnych napisów: ${selectedCaption.languageCode || selectedCaption.vssId}`);
+      // Funkcja sprawdzająca czy napisy są angielskie
+      function isEnglishCaption(caption) {
+        const code = (caption.languageCode || '').toLowerCase();
+        const vss = (caption.vssId || '').toLowerCase();
+
+        if (code.includes('en')) return true;
+        if (vss.includes('en')) return true;
+        if (vss.startsWith('a.en')) return true;
+
+        return false;
+      }
+
+      // 1. Najpierw szukaj polskich napisów
+      selectedCaption = captionTracks.find(isPolishCaption);
+      if (selectedCaption) {
+        console.log('🇵🇱 Znaleziono polskie napisy:', selectedCaption.languageCode || selectedCaption.vssId);
+      } else {
+        console.log('⚠️ Nie znaleziono polskich napisów, szukam angielskich...');
+
+        // 2. Potem angielskie
+        selectedCaption = captionTracks.find(isEnglishCaption);
+        if (selectedCaption) {
+          console.log('🇬🇧 Używam angielskich napisów:', selectedCaption.languageCode || selectedCaption.vssId);
+        } else {
+          console.log('⚠️ Nie znaleziono angielskich napisów, używam pierwszych dostępnych...');
+
+          // 3. W ostateczności pierwszy dostępny
+          selectedCaption = captionTracks[0];
+          if (selectedCaption) {
+            console.log('🌍 Używam pierwszych dostępnych napisów:', selectedCaption.languageCode || selectedCaption.vssId);
+          }
+        }
       }
 
       if (!selectedCaption.baseUrl) return null;
