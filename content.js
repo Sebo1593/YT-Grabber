@@ -765,19 +765,22 @@ class YouTubeTranscriptExtractor {
       // Preferuj polski, potem angielski
       const preferredLanguages = [
         'pl', 'pl-PL', 'pl-pl',
-        'en', 'en-US', 'en-GB', 'en-us', 'en-gb',
-        'a.pl', 'a.en', 'a.en-US', 'a.en-GB'
+        'en', 'en-US', 'en-GB', 'en-us', 'en-gb'
       ];
 
       let selectedCaption = null;
 
       for (const lang of preferredLanguages) {
-        selectedCaption = captionTracks.find(caption => 
-          caption.languageCode === lang || 
-          caption.vssId === lang ||
-          caption.vssId === `a.${lang}` ||
-          caption.vssId === `${lang}.${this.extractVideoId()}`
-        );
+        const lower = lang.toLowerCase();
+        selectedCaption = captionTracks.find(caption => {
+          const code = (caption.languageCode || '').toLowerCase();
+          const vss = (caption.vssId || '').toLowerCase();
+          return code === lower ||
+                 vss === lower ||
+                 vss.startsWith(`${lower}.`) ||
+                 vss.startsWith(`a.${lower}`) ||
+                 vss.startsWith(`a.${lower}.`);
+        });
         if (selectedCaption) {
           console.log(`🎯 Wybrano napisy: ${selectedCaption.languageCode || selectedCaption.vssId}`);
           break;
