@@ -1,7 +1,6 @@
 // content.js - Finalna wersja z pełną funkcjonalnością
 class YouTubeTranscriptExtractor {
   constructor() {
-    this.buttonAdded = false;
     this.modalOpen = false;
     this.init();
   }
@@ -14,7 +13,9 @@ class YouTubeTranscriptExtractor {
 
   waitForPageLoad() {
     const checkAndAdd = () => {
-      if (this.shouldAddButton() && !this.buttonAdded) {
+      // Re-add the button if it was removed by dynamic page updates
+      const hasButton = document.getElementById('transcript-summary-btn');
+      if (this.shouldAddButton() && !hasButton) {
         setTimeout(() => this.addSummaryButton(), 1000);
       }
     };
@@ -31,7 +32,7 @@ class YouTubeTranscriptExtractor {
   }
 
   addSummaryButton() {
-    if (this.buttonAdded || document.getElementById('transcript-summary-btn')) {
+    if (document.getElementById('transcript-summary-btn')) {
       return;
     }
 
@@ -90,7 +91,6 @@ class YouTubeTranscriptExtractor {
     });
     
     document.body.appendChild(summaryButton);
-    this.buttonAdded = true;
     
     setTimeout(() => {
       this.showNotification('🎯 Przycisk "Analizuj" jest gotowy!', 'success');
@@ -990,7 +990,6 @@ ${transcript}`,
       const url = location.href;
       if (url !== lastUrl) {
         lastUrl = url;
-        this.buttonAdded = false;
         this.modalOpen = false;
         
         // Usuń stary przycisk
