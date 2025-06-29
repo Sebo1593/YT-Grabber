@@ -821,7 +821,13 @@ class YouTubeTranscriptExtractor {
 
       if (!selectedCaption.baseUrl) return null;
 
-      const response = await fetch(selectedCaption.baseUrl);
+      // Ensure the caption URL requests VTT format if no format is specified
+      const captionUrl = new URL(selectedCaption.baseUrl);
+      if (!captionUrl.searchParams.has('fmt')) {
+        captionUrl.searchParams.set('fmt', 'vtt');
+      }
+
+      const response = await fetch(captionUrl.toString());
       if (!response.ok) {
         console.error('Błąd pobierania transkrypcji:', response.status);
         return null;
