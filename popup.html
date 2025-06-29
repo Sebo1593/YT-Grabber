@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ZT-Youtube</title>
+  <link rel="stylesheet" href="popup-styles.css">
+</head>
+<body>
+  <div class="header">
+    <h1>
+      🧠 ZT-Youtube
+      <span class="version">v2.1</span>
+    </h1>
+    <p>Analizuj transkrypcje YouTube przy pomocy AI</p>
+  </div>
+
+  <div class="status-section">
+    <h3>✅ Rozszerzenie aktywne</h3>
+    <p>Kliknij przycisk "Analizuj" w prawym górnym rogu YouTube, aby wysłać transkrypcję do wybranej platformy AI.</p>
+  </div>
+
+  <div class="settings-section">
+    <h3>🎯 Domyślna platforma AI</h3>
+    <label>Wybierz domyślną platformę AI:</label>
+    <div class="platform-options">
+      <div class="platform-btn chatgpt active" data-platform="chatgpt">
+        <span>🤖</span> ChatGPT
+      </div>
+      <div class="platform-btn claude" data-platform="claude">
+        <span>🧠</span> Claude
+      </div>
+    </div>
+    
+    <div class="model-selection" id="model-selection">
+      <label for="model-select">Domyślny model:</label>
+      <select id="model-select">
+        <option value="gpt-4o">GPT-4o (Najlepszy dla większości zadań)</option>
+        <option value="o1">o1 (Zaawansowane rozumowanie)</option>
+        <option value="gpt-4o-mini">GPT-4o mini (Szybki i ekonomiczny)</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <h3>🔍 Domyślny typ analizy</h3>
+    <label>Wybierz domyślny typ analizy:</label>
+    <div class="analysis-types">
+      <div class="analysis-type-btn summary active" data-type="summary">
+        📄 Podsumowanie
+      </div>
+      <div class="analysis-type-btn analysis" data-type="analysis">
+        🔍 Analiza
+      </div>
+      <div class="analysis-type-btn bullet" data-type="bullet">
+        • Punkty
+      </div>
+      <div class="analysis-type-btn custom" data-type="custom">
+        ✨ Własny
+      </div>
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <h3>⚙️ Ustawienia</h3>
+    <div class="additional-settings">
+      <div class="setting-item">
+        <span class="setting-label">Otwórz w nowej karcie</span>
+        <div class="setting-toggle active" id="new-tab-toggle"></div>
+      </div>
+      <div class="setting-item">
+        <span class="setting-label">Powiadomienia</span>
+        <div class="setting-toggle active" id="notifications-toggle"></div>
+      </div>
+      <div class="setting-item">
+        <span class="setting-label">Automatyczne wysyłanie (Enter)</span>
+        <div class="setting-toggle active" id="auto-send-toggle"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <h3>📝 Edytor promptu</h3>
+    <div class="form-group">
+      <label for="custom-prompt">Własny prompt (opcjonalnie):</label>
+      <textarea 
+        id="custom-prompt" 
+        rows="6" 
+        placeholder="Wpisz swój własny prompt lub zostaw puste dla domyślnych szablonów..."
+      ></textarea>
+      <div class="help-text">
+        <strong>Zmienne dostępne:</strong><br>
+        <code>{title}</code> - tytuł wideo<br>
+        <code>{url}</code> - link do wideo<br>
+        <code>{transcript}</code> - transkrypcja (automatycznie dodawana na końcu)
+      </div>
+    </div>
+    
+    <div class="prompt-templates">
+      <label>Szablony promptów:</label>
+      <div class="template-buttons">
+        <button type="button" class="template-btn" data-template="default">📋 Domyślny</button>
+        <button type="button" class="template-btn" data-template="summary">📄 Podsumowanie</button>
+        <button type="button" class="template-btn" data-template="analysis">🔍 Analiza</button>
+        <button type="button" class="template-btn" data-template="bullet">• Punkty</button>
+        <button type="button" class="template-btn" data-template="custom">✨ Własny</button>
+      </div>
+    </div>
+  </div>
+
+  <button class="save-btn" id="save-btn">💾 Zapisz ustawienia</button>
+
+  <div id="status-message" class="status-message" style="display: none;"></div>
+
+  <div class="instructions">
+    <h3>📋 Jak używać:</h3>
+    <ol>
+      <li><strong>Otwórz wideo</strong> na YouTube z napisami</li>
+      <li><strong>Kliknij przycisk</strong> "Analizuj" w prawym górnym rogu</li>
+      <li><strong>Wybierz typ analizy</strong> (podsumowanie, analiza, punkty, własny)</li>
+      <li><strong>Wybierz platformę</strong> AI (ChatGPT lub Claude)</li>
+      <li><strong>Kliknij "Rozpocznij analizę"</strong></li>
+      <li><strong>Platforma AI</strong> otworzy się z gotowym promptem</li>
+    </ol>
+  </div>
+
+  <div class="footer">
+    <p>ZT-Youtube - Analizuj YouTube z AI</p>
+  </div>
+
+  <script src="popup-script.js"></script>
+</body>
+</html>

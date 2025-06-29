@@ -1,0 +1,71 @@
+/* styles.css - Dodatkowe style dla rozszerzenia YouTube to AI */
+/* Style są głównie inline w content.js, ale można dodać tu dodatkowe */
+
+/* Dodatkowe style dla powiadomień */
+.youtube-ai-notification {
+  font-family: "Roboto", Arial, sans-serif !important;
+  user-select: none;
+}
+
+/* Zapewnienie że przycisk nie będzie zasłonięty przez inne elementy */
+#transcript-summary-btn {
+  pointer-events: all !important;
+  user-select: none !important;
+}
+
+/* Dodatkowe animacje */
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.7; }
+  100% { opacity: 1; }
+}
+
+/* Style dla różnych rozdzielczości */
+@media (max-width: 768px) {
+  #transcript-summary-btn {
+    top: 10px !important;
+    right: 10px !important;
+    padding: 10px 16px !important;
+    font-size: 13px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  #transcript-summary-btn {
+    top: 5px !important;
+    right: 5px !important;
+    padding: 8px 12px !important;
+    font-size: 12px !important;
+    min-width: 100px !important;
+  }
+}
+/* -- Dodane style dla powiadomień i animacji (Wersja 5.0) -- */
+
+.youtube-ai-notification {
+  position: fixed;
+  top: 150px;
+  right: 20px;
+  color: white;
+  padding: 16px 24px;
+  border-radius: 12px;
+  z-index: 100001;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+  max-width: 350px;
+  line-height: 1.5;
+  font-size: 14px;
+  font-family: "Roboto", Arial, sans-serif;
+  animation: slideInAndOut 5s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards;
+  pointer-events: all;
+  cursor: pointer;
+}
+
+.youtube-ai-notification.success { background-color: #10a37f; }
+.youtube-ai-notification.error { background-color: #dc2626; }
+.youtube-ai-notification.warning { background-color: #d97706; }
+.youtube-ai-notification.info { background-color: #0066cc; }
+
+@keyframes slideInAndOut {
+  0% { transform: translateX(110%); opacity: 0; }
+  15%, 85% { transform: translateX(0); opacity: 1; }
+  100% { transform: translateX(110%); opacity: 0; }
+}
