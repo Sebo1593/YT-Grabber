@@ -807,23 +807,31 @@ class YouTubeTranscriptExtractor {
       const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
       const textElements = xmlDoc.querySelectorAll('text');
 
-      if (textElements.length === 0) {
-        console.log('❌ Brak elementów text w XML');
-        return null;
-      }
-
       let transcript = '';
-      textElements.forEach((element) => {
-        const text = element.textContent?.trim();
-        if (text) {
-          const decodedText = this.decodeHTMLEntities(text);
-          transcript += decodedText + ' ';
+
+      if (textElements.length > 0) {
+        textElements.forEach((element) => {
+          const text = element.textContent?.trim();
+          if (text) {
+            const decodedText = this.decodeHTMLEntities(text);
+            transcript += decodedText + ' ';
+          }
+        });
+      } else {
+        console.log('❌ Brak elementów text w XML, próba parsowania VTT');
+        const lines = xmlText.split(/\r?\n/);
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed || trimmed.startsWith('WEBVTT') || /^\d+$/.test(trimmed) || /--\>/.test(trimmed)) {
+            continue;
+          }
+          transcript += trimmed + ' ';
         }
-      });
+      }
 
       const finalTranscript = transcript.trim();
       console.log(`✅ Transkrypcja gotowa, długość: ${finalTranscript.length} znaków`);
-      
+
       return finalTranscript || null;
 
     } catch (error) {
