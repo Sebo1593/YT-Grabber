@@ -52,9 +52,8 @@ document.addEventListener('DOMContentLoaded', function() {
 // Modele dla różnych platform
 const models = {
   chatgpt: [
-    { value: 'gpt-4o', text: 'GPT-4o (Najlepszy dla większości zadań)' },
-    { value: 'o1', text: 'o1 (Zaawansowane rozumowanie)' },
-    { value: 'gpt-4o-mini', text: 'GPT-4o mini (Szybki i ekonomiczny)' }
+    { value: 'gpt-4o', text: 'GPT-4o (najnowszy)' },
+    { value: 'o3', text: 'o3 (szybki)' }
   ],
   claude: [
     { value: 'claude-3-5-sonnet', text: 'Claude 3.5 Sonnet (Najnowszy)' },
@@ -306,7 +305,13 @@ function loadSettings() {
     // Ustaw model jeśli jest zapisany
     if (result.ai_model && modelSelect) {
       modelSelect.value = result.ai_model;
-      console.log('🔧 Model set to:', result.ai_model);
+      const optionExists = Array.from(modelSelect.options).some(
+        opt => opt.value === result.ai_model
+      );
+      if (!optionExists) {
+        modelSelect.value = modelSelect.options[0].value;
+      }
+      console.log('🔧 Model set to:', modelSelect.value);
     }
     
     // Toggles
