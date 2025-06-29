@@ -11,6 +11,8 @@ document.addEventListener('DOMContentLoaded', function() {
   const analysisTypeBtns = document.querySelectorAll('.analysis-type-btn');
   const modelSelection = document.getElementById('model-selection');
   const modelSelect = document.getElementById('model-select');
+  const buttonPositionSelect = document.getElementById('button-position');
+  const buttonStyleSelect = document.getElementById('button-style');
   const saveBtn = document.getElementById('save-btn');
   const statusMessage = document.getElementById('status-message');
   const customPrompt = document.getElementById('custom-prompt');
@@ -21,6 +23,8 @@ document.addEventListener('DOMContentLoaded', function() {
   console.log('- Analysis type buttons:', analysisTypeBtns.length);
   console.log('- Model selection:', !!modelSelection);
   console.log('- Model select:', !!modelSelect);
+  console.log('- Button position select:', !!buttonPositionSelect);
+  console.log('- Button style select:', !!buttonStyleSelect);
   console.log('- Save button:', !!saveBtn);
   console.log('- Status message:', !!statusMessage);
   console.log('- Custom prompt:', !!customPrompt);
@@ -48,9 +52,8 @@ document.addEventListener('DOMContentLoaded', function() {
 // Modele dla różnych platform
 const models = {
   chatgpt: [
-    { value: 'gpt-4o', text: 'GPT-4o (Najlepszy dla większości zadań)' },
-    { value: 'o1', text: 'o1 (Zaawansowane rozumowanie)' },
-    { value: 'gpt-4o-mini', text: 'GPT-4o mini (Szybki i ekonomiczny)' }
+    { value: 'gpt-4o', text: 'GPT-4o (najnowszy)' },
+    { value: 'o3', text: 'o3 (szybki)' }
   ],
   claude: [
     { value: 'claude-3-5-sonnet', text: 'Claude 3.5 Sonnet (Najnowszy)' },
@@ -246,10 +249,12 @@ function loadSettings() {
     'ai_platform', 
     'ai_model', 
     'analysis_type',
-    'new_tab', 
+    'new_tab',
     'notifications',
     'auto_send',
-    'custom_prompt'
+    'custom_prompt',
+    'button_position',
+    'button_style'
   ], function(result) {
     console.log('📊 Loaded settings:', result);
     
@@ -300,7 +305,13 @@ function loadSettings() {
     // Ustaw model jeśli jest zapisany
     if (result.ai_model && modelSelect) {
       modelSelect.value = result.ai_model;
-      console.log('🔧 Model set to:', result.ai_model);
+      const optionExists = Array.from(modelSelect.options).some(
+        opt => opt.value === result.ai_model
+      );
+      if (!optionExists) {
+        modelSelect.value = modelSelect.options[0].value;
+      }
+      console.log('🔧 Model set to:', modelSelect.value);
     }
     
     // Toggles
@@ -315,6 +326,16 @@ function loadSettings() {
     if (result.auto_send !== false && autoSendToggle) {
       autoSendToggle.classList.add('active');
       console.log('✅ Auto send toggle activated');
+    }
+
+    if (buttonPositionSelect) {
+      buttonPositionSelect.value = result.button_position || 'middle-right';
+      console.log('📍 Button position set to:', buttonPositionSelect.value);
+    }
+
+    if (buttonStyleSelect) {
+      buttonStyleSelect.value = result.button_style || 'gradient';
+      console.log('🎨 Button style set to:', buttonStyleSelect.value);
     }
     
     // Custom prompt
@@ -421,6 +442,8 @@ function saveSettings() {
   const newTabToggle = document.getElementById('new-tab-toggle');
   const notificationsToggle = document.getElementById('notifications-toggle');
   const autoSendToggle = document.getElementById('auto-send-toggle');
+  const buttonPositionSelect = document.getElementById('button-position');
+  const buttonStyleSelect = document.getElementById('button-style');
   const saveBtn = document.getElementById('save-btn');
   const statusMessage = document.getElementById('status-message');
   
@@ -442,7 +465,9 @@ function saveSettings() {
     new_tab: newTabToggle ? newTabToggle.classList.contains('active') : true,
     notifications: notificationsToggle ? notificationsToggle.classList.contains('active') : true,
     auto_send: autoSendToggle ? autoSendToggle.classList.contains('active') : true,
-    custom_prompt: promptText
+    custom_prompt: promptText,
+    button_position: buttonPositionSelect ? buttonPositionSelect.value : 'middle-right',
+    button_style: buttonStyleSelect ? buttonStyleSelect.value : 'gradient'
   };
 
   console.log('📊 Settings to save:', settings);
@@ -466,7 +491,14 @@ function saveSettings() {
     } else {
       console.log('✅ Settings saved successfully');
       showStatus('✅ Ustawienia zostały zapisane!', 'success');
-      
+
+      // Powiadom zakładki YouTube o zmianie ustawień
+      chrome.tabs.query({ url: '*://*.youtube.com/*' }, function(tabs) {
+        tabs.forEach(tab => {
+          chrome.tabs.sendMessage(tab.id, { action: 'refreshButton' });
+        });
+      });
+
       // Ukryj status po 3 sekundach
       setTimeout(() => {
         if (statusMessage) {

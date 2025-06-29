@@ -1,20 +1,25 @@
 // content.js - Finalna wersja z pełną funkcjonalnością
 class YouTubeTranscriptExtractor {
   constructor() {
-    this.buttonAdded = false;
     this.modalOpen = false;
+    this.buttonPosition = 'middle-right';
+    this.buttonStyle = 'gradient';
     this.init();
   }
 
-  init() {
+  async init() {
     this.setupMessageListener();
+    await this.loadButtonSettings();
+    this.setupStorageListener();
     this.waitForPageLoad();
     this.setupNavigationListener();
   }
 
   waitForPageLoad() {
     const checkAndAdd = () => {
-      if (this.shouldAddButton() && !this.buttonAdded) {
+      // Re-add the button if it was removed by dynamic page updates
+      const hasButton = document.getElementById('transcript-summary-btn');
+      if (this.shouldAddButton() && !hasButton) {
         setTimeout(() => this.addSummaryButton(), 1000);
       }
     };
@@ -26,12 +31,48 @@ class YouTubeTranscriptExtractor {
   }
 
   shouldAddButton() {
-    return window.location.href.includes('youtube.com') && 
+    return window.location.href.includes('youtube.com') &&
            window.location.href.includes('/watch');
   }
 
+  loadButtonSettings() {
+    return new Promise((resolve) => {
+      chrome.storage.sync.get(['button_position', 'button_style'], (res) => {
+        this.buttonPosition = res.button_position || 'middle-right';
+        this.buttonStyle = res.button_style || 'gradient';
+        resolve();
+      });
+    });
+  }
+
+  setupStorageListener() {
+    chrome.storage.onChanged.addListener((changes, area) => {
+      if (area === 'sync' && (changes.button_position || changes.button_style)) {
+        if (changes.button_position) this.buttonPosition = changes.button_position.newValue;
+        if (changes.button_style) this.buttonStyle = changes.button_style.newValue;
+        const oldBtn = document.getElementById('transcript-summary-btn');
+        if (oldBtn) oldBtn.remove();
+        if (this.shouldAddButton()) {
+          this.addSummaryButton();
+        }
+      }
+    });
+  }
+
+  getPositionStyles() {
+    switch (this.buttonPosition) {
+      case 'top-right':
+        return 'top: 20px !important; right: 20px !important;';
+      case 'bottom-right':
+        return 'bottom: 20px !important; right: 20px !important;';
+      case 'middle-right':
+      default:
+        return 'top: 80px !important; right: 20px !important;';
+    }
+  }
+
   addSummaryButton() {
-    if (this.buttonAdded || document.getElementById('transcript-summary-btn')) {
+    if (document.getElementById('transcript-summary-btn')) {
       return;
     }
 
@@ -45,16 +86,20 @@ class YouTubeTranscriptExtractor {
     `;
     summaryButton.title = 'Analizuj wideo i wyślij do AI';
     
+    const positionStyles = this.getPositionStyles();
+    const baseBg = this.buttonStyle === 'gray'
+      ? '#6b7280'
+      : 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)';
+
     summaryButton.style.cssText = `
       position: fixed !important;
-      top: 20px !important;
-      right: 20px !important;
+      ${positionStyles}
       z-index: 999999 !important;
       display: flex !important;
       align-items: center !important;
       gap: 8px !important;
       padding: 12px 20px !important;
-      background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%) !important;
+      background: ${baseBg} !important;
       color: white !important;
       border: none !important;
       border-radius: 25px !important;
@@ -80,17 +125,18 @@ class YouTubeTranscriptExtractor {
     summaryButton.addEventListener('mouseenter', () => {
       summaryButton.style.transform = 'translateY(-2px) scale(1.05)';
       summaryButton.style.boxShadow = '0 8px 30px rgba(79, 70, 229, 0.6)';
-      summaryButton.style.background = 'linear-gradient(135deg, #5b21b6 0%, #8b5cf6 100%)';
+      summaryButton.style.background = this.buttonStyle === 'gray'
+        ? '#4b5563'
+        : 'linear-gradient(135deg, #5b21b6 0%, #8b5cf6 100%)';
     });
-    
+
     summaryButton.addEventListener('mouseleave', () => {
       summaryButton.style.transform = 'translateY(0) scale(1)';
       summaryButton.style.boxShadow = '0 4px 20px rgba(79, 70, 229, 0.4)';
-      summaryButton.style.background = 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)';
+      summaryButton.style.background = baseBg;
     });
     
     document.body.appendChild(summaryButton);
-    this.buttonAdded = true;
     
     setTimeout(() => {
       this.showNotification('🎯 Przycisk "Analizuj" jest gotowy!', 'success');
@@ -317,9 +363,8 @@ class YouTubeTranscriptExtractor {
           background: white;
           cursor: pointer;
         ">
-          <option value="gpt-4o">GPT-4o (Najlepszy)</option>
-          <option value="o1">o1 (Rozumowanie)</option>
-          <option value="gpt-4o-mini">GPT-4o mini (Szybki)</option>
+          <option value="gpt-4o">GPT-4o (Najnowszy)</option>
+          <option value="o3">o3 (Szybki)</option>
         </select>
       </div>
 
@@ -921,6 +966,14 @@ ${transcript}`,
         this.showNotification(`✅ ${platformName} otwarty - prompt ${sendStatus}!`, 'success');
       } else if (message.action === 'showNotification') {
         this.showNotification(message.message, message.type || 'info');
+      } else if (message.action === 'refreshButton') {
+        this.loadButtonSettings().then(() => {
+          const oldBtn = document.getElementById('transcript-summary-btn');
+          if (oldBtn) oldBtn.remove();
+          if (this.shouldAddButton()) {
+            this.addSummaryButton();
+          }
+        });
       }
     });
   }
@@ -990,7 +1043,6 @@ ${transcript}`,
       const url = location.href;
       if (url !== lastUrl) {
         lastUrl = url;
-        this.buttonAdded = false;
         this.modalOpen = false;
         
         // Usuń stary przycisk
