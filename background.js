@@ -29,18 +29,13 @@ class AIOpener {
         if (tabId === aiTab.id && info.status === 'complete') {
           chrome.tabs.onUpdated.removeListener(listener);
           
-          // ZMIANA: Zwiększony czas oczekiwania dla większej niezawodności
-          const waitTime = platform === 'claude' ? 6000 : 5000;
-          console.log(`⏳ Czekam ${waitTime}ms na pełne załadowanie ${platform}...`);
-          
-          setTimeout(() => {
-            console.log(`💉 Wstrzykuję skrypt do wklejania promptu...`);
-            
-            chrome.scripting.executeScript({
-              target: { tabId: aiTab.id },
-              func: injectorFunction,
-              args: [prompt, platform, autoSend]
-            }).then((results) => {
+          console.log('⏳ Strona załadowana, wstrzykuję skrypt...');
+
+          chrome.scripting.executeScript({
+            target: { tabId: aiTab.id },
+            func: injectorFunction,
+            args: [prompt, platform, autoSend]
+          }).then((results) => {
               if (chrome.runtime.lastError) {
                 console.error('❌ Błąd wstrzykiwania skryptu:', chrome.runtime.lastError.message);
                 this.copyToClipboardFallback(prompt, sourceTabId, platform, autoSend);
@@ -62,7 +57,6 @@ class AIOpener {
               console.error(`❌ Błąd wykonania skryptu dla ${platform}:`, error);
               this.copyToClipboardFallback(prompt, sourceTabId, platform, autoSend);
             });
-          }, waitTime);
         }
       });
     } catch (error) {
