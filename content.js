@@ -25,9 +25,23 @@ class YouTubeTranscriptExtractor {
     };
 
     checkAndAdd();
-    
+
     const observer = new MutationObserver(checkAndAdd);
     observer.observe(document.body, { childList: true, subtree: true });
+
+    const appNode = document.querySelector('ytd-app');
+    if (appNode) {
+      const appObserver = new MutationObserver(checkAndAdd);
+      appObserver.observe(appNode, { childList: true, subtree: true });
+    }
+
+    const flexyNode = document.querySelector('ytd-watch-flexy');
+    if (flexyNode) {
+      const flexyObserver = new MutationObserver(checkAndAdd);
+      flexyObserver.observe(flexyNode, { childList: true, subtree: true });
+    }
+
+    setInterval(checkAndAdd, 3000);
   }
 
   shouldAddButton() {
@@ -1068,6 +1082,12 @@ ${transcript}`,
 
     const observer = new MutationObserver(checkNavigation);
     observer.observe(document, { subtree: true, childList: true });
+
+    const navApp = document.querySelector('ytd-app');
+    if (navApp) {
+      const navObserver = new MutationObserver(checkNavigation);
+      navObserver.observe(navApp, { childList: true, subtree: true });
+    }
     
     window.addEventListener('popstate', checkNavigation);
     
@@ -1084,6 +1104,8 @@ ${transcript}`,
       originalReplaceState.apply(history, arguments);
       setTimeout(checkNavigation, 100);
     };
+
+    setInterval(checkNavigation, 3000);
   }
 }
 
