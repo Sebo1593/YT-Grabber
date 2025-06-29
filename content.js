@@ -762,12 +762,6 @@ class YouTubeTranscriptExtractor {
     try {
       console.log('📝 Znalezione napisy:', captionTracks.map(c => c.languageCode || c.vssId));
 
-      // Preferuj polski, potem angielski
-      const preferredLanguages = [
-        'pl', 'pl-PL', 'pl-pl',
-        'en', 'en-US', 'en-GB', 'en-us', 'en-gb'
-      ];
-
       let selectedCaption = null;
 
       // Dodaj DEBUGGING - aby zobaczyć wszystkie dostępne napisy
