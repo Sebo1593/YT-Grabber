@@ -1,32 +1,35 @@
-// content.js - Finalna wersja z pełną funkcjonalnością
+// content.js - RZECZYWISTE ROZWIĄZANIE problemu polskich napisów automatycznych
 class YouTubeTranscriptExtractor {
   constructor() {
     this.modalOpen = false;
     this.buttonPosition = 'middle-right';
     this.buttonStyle = 'gradient';
+    this.retryCount = 0;
+    this.maxRetries = 3;
     this.init();
   }
 
   async init() {
+    console.log('🚀 Inicjalizuję ZT-Youtube...');
     this.setupMessageListener();
     await this.loadButtonSettings();
     this.setupStorageListener();
     this.setupFullscreenListener();
     this.waitForPageLoad();
     this.setupNavigationListener();
+    console.log('✅ ZT-Youtube zainicjalizowany');
   }
 
   waitForPageLoad() {
     const checkAndAdd = () => {
-      // Re-add the button if it was removed by dynamic page updates
       const hasButton = document.getElementById('transcript-summary-btn');
       if (this.shouldAddButton() && !hasButton) {
+        console.log('🔄 Dodaję przycisk...');
         setTimeout(() => this.addSummaryButton(), 1000);
       }
     };
 
     checkAndAdd();
-
     const observer = new MutationObserver(checkAndAdd);
     observer.observe(document.body, { childList: true, subtree: true });
 
@@ -36,48 +39,63 @@ class YouTubeTranscriptExtractor {
       appObserver.observe(appNode, { childList: true, subtree: true });
     }
 
-    const flexyNode = document.querySelector('ytd-watch-flexy');
-    if (flexyNode) {
-      const flexyObserver = new MutationObserver(checkAndAdd);
-      flexyObserver.observe(flexyNode, { childList: true, subtree: true });
-    }
-
-    setInterval(checkAndAdd, 3000);
+    setInterval(checkAndAdd, 5000);
   }
 
   shouldAddButton() {
-    return window.location.href.includes('youtube.com') &&
-           window.location.href.includes('/watch');
+    const isYouTube = window.location.href.includes('youtube.com');
+    const isWatchPage = window.location.href.includes('/watch');
+    const result = isYouTube && isWatchPage;
+    console.log('🔍 shouldAddButton:', { isYouTube, isWatchPage, result });
+    return result;
   }
 
-  loadButtonSettings() {
+  async loadButtonSettings() {
     return new Promise((resolve) => {
-      chrome.storage.sync.get(['button_position', 'button_style'], (res) => {
-        this.buttonPosition = res.button_position || 'middle-right';
-        this.buttonStyle = res.button_style || 'gradient';
+      try {
+        chrome.storage.sync.get(['button_position', 'button_style'], (res) => {
+          if (chrome.runtime.lastError) {
+            console.log('⚠️ Chrome storage error, używam domyślnych ustawień');
+            resolve();
+            return;
+          }
+          this.buttonPosition = res.button_position || 'middle-right';
+          this.buttonStyle = res.button_style || 'gradient';
+          console.log('⚙️ Ustawienia załadowane:', { position: this.buttonPosition, style: this.buttonStyle });
+          resolve();
+        });
+      } catch (error) {
+        console.log('⚠️ Chrome storage niedostępne, używam domyślnych ustawień');
         resolve();
-      });
+      }
     });
   }
 
   setupStorageListener() {
-    chrome.storage.onChanged.addListener((changes, area) => {
-      if (area === 'sync' && (changes.button_position || changes.button_style)) {
-        if (changes.button_position) this.buttonPosition = changes.button_position.newValue;
-        if (changes.button_style) this.buttonStyle = changes.button_style.newValue;
-        const oldBtn = document.getElementById('transcript-summary-btn');
-        if (oldBtn) oldBtn.remove();
-        if (this.shouldAddButton()) {
-          this.addSummaryButton();
+    try {
+      chrome.storage.onChanged.addListener((changes, area) => {
+        if (area === 'sync' && (changes.button_position || changes.button_style)) {
+          if (changes.button_position) this.buttonPosition = changes.button_position.newValue;
+          if (changes.button_style) this.buttonStyle = changes.button_style.newValue;
+          
+          const oldBtn = document.getElementById('transcript-summary-btn');
+          if (oldBtn) oldBtn.remove();
+          
+          if (this.shouldAddButton()) {
+            this.addSummaryButton();
+          }
         }
-      }
-    });
+      });
+    } catch (error) {
+      console.log('⚠️ Storage listener setup failed, but continuing...');
+    }
   }
 
   setupFullscreenListener() {
     document.addEventListener('fullscreenchange', () => {
       const btn = document.getElementById('transcript-summary-btn');
       if (!btn) return;
+      
       if (document.fullscreenElement) {
         btn.style.display = 'none';
       } else {
@@ -106,6 +124,7 @@ class YouTubeTranscriptExtractor {
 
   addSummaryButton() {
     if (document.getElementById('transcript-summary-btn')) {
+      console.log('⚠️ Przycisk już istnieje, pomijam');
       return;
     }
 
@@ -151,6 +170,7 @@ class YouTubeTranscriptExtractor {
     summaryButton.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
+      console.log('🖱️ Przycisk kliknięty');
       this.showModelSelection();
     });
     
@@ -170,6 +190,7 @@ class YouTubeTranscriptExtractor {
     });
     
     document.body.appendChild(summaryButton);
+    console.log('✅ Przycisk dodany do DOM');
     
     setTimeout(() => {
       this.showNotification('🎯 Przycisk "Analizuj" jest gotowy!', 'success');
@@ -203,7 +224,6 @@ class YouTubeTranscriptExtractor {
       animation: modalFadeIn 0.3s ease-out !important;
     `;
 
-    // Dodaj style animacji
     if (!document.getElementById('modal-styles')) {
       const style = document.createElement('style');
       style.id = 'modal-styles';
@@ -222,7 +242,6 @@ class YouTubeTranscriptExtractor {
 
     modalPanel.innerHTML = this.getModalHTML();
 
-    // Dodaj backdrop
     const backdrop = document.createElement('div');
     backdrop.id = 'modal-backdrop';
     backdrop.style.cssText = `
@@ -396,8 +415,8 @@ class YouTubeTranscriptExtractor {
           background: white;
           cursor: pointer;
         ">
-          <option value="gpt-4o">GPT-4o (Najnowszy)</option>
-          <option value="o3">o3 (Szybki)</option>
+          <option value="gpt-4o">GPT-4o (najnowszy)</option>
+          <option value="o3">o3 (szybki)</option>
         </select>
       </div>
 
@@ -455,14 +474,30 @@ class YouTubeTranscriptExtractor {
           "></div>
           <span id="progress-text">Pobieranie transkrypcji...</span>
         </div>
+        <div id="method-info" style="margin-top: 8px; font-size: 12px; color: #666;">
+          Metoda: <span id="current-method">DOM</span>
+        </div>
       </div>
     `;
   }
 
   setupModalEventListeners(modalPanel) {
-    // Obsługa wyboru typu analizy
     const analysisTypeBtns = modalPanel.querySelectorAll('.analysis-type');
+    const platformBtns = modalPanel.querySelectorAll('.platform-choice');
+    const modelArea = modalPanel.querySelector('#model-selection-area');
+    const modelDropdown = modalPanel.querySelector('#model-dropdown');
+    
     let selectedAnalysisType = 'summary';
+    let selectedPlatform = 'chatgpt';
+
+    // Załaduj domyślne ustawienia
+    this.loadModalSettings().then(settings => {
+      selectedAnalysisType = settings.analysis_type || 'summary';
+      selectedPlatform = settings.ai_platform || 'chatgpt';
+      
+      // Ustaw domyślne wybory
+      this.setModalDefaults(modalPanel, settings);
+    });
 
     analysisTypeBtns.forEach(btn => {
       btn.addEventListener('click', () => {
@@ -470,7 +505,7 @@ class YouTubeTranscriptExtractor {
           const type = b.dataset.type;
           const colors = {
             summary: '#10a37f',
-            analysis: '#7c3aed', 
+            analysis: '#7c3aed',
             bullet: '#f59e0b',
             custom: '#6b7280'
           };
@@ -488,13 +523,6 @@ class YouTubeTranscriptExtractor {
         console.log('🔍 Wybrano typ analizy:', selectedAnalysisType);
       });
     });
-
-    // Obsługa wyboru platformy
-    const platformBtns = modalPanel.querySelectorAll('.platform-choice');
-    const modelArea = modalPanel.querySelector('#model-selection-area');
-    const modelDropdown = modalPanel.querySelector('#model-dropdown');
-    
-    let selectedPlatform = 'chatgpt';
 
     platformBtns.forEach(btn => {
       btn.addEventListener('click', () => {
@@ -516,16 +544,6 @@ class YouTubeTranscriptExtractor {
       });
     });
 
-    // Hover effect dla close button
-    const closeBtn = modalPanel.querySelector('#close-modal');
-    closeBtn.addEventListener('mouseenter', () => {
-      closeBtn.style.backgroundColor = '#f1f5f9';
-    });
-    closeBtn.addEventListener('mouseleave', () => {
-      closeBtn.style.backgroundColor = 'transparent';
-    });
-
-    // Obsługa przycisków
     modalPanel.querySelector('#close-modal').addEventListener('click', () => {
       this.closeModal();
     });
@@ -543,6 +561,57 @@ class YouTubeTranscriptExtractor {
       this.showProgress(modalPanel);
       this.handleSummaryRequest(selectedPlatform, selectedModel, selectedAnalysisType, autoSend, modalPanel);
     });
+  }
+
+  async loadModalSettings() {
+    return new Promise((resolve) => {
+      try {
+        chrome.storage.sync.get([
+          'ai_platform', 
+          'ai_model', 
+          'analysis_type',
+          'auto_send'
+        ], (result) => {
+          if (chrome.runtime.lastError) {
+            console.log('⚠️ Storage error, using defaults');
+            resolve({});
+            return;
+          }
+          resolve(result);
+        });
+      } catch (error) {
+        console.log('⚠️ Storage unavailable, using defaults');
+        resolve({});
+      }
+    });
+  }
+
+  setModalDefaults(modalPanel, settings) {
+    // Ustaw domyślny typ analizy
+    const analysisType = settings.analysis_type || 'summary';
+    const analysisBtn = modalPanel.querySelector(`[data-type="${analysisType}"]`);
+    if (analysisBtn) {
+      analysisBtn.click();
+    }
+
+    // Ustaw domyślną platformę
+    const platform = settings.ai_platform || 'chatgpt';
+    const platformBtn = modalPanel.querySelector(`[data-platform="${platform}"]`);
+    if (platformBtn) {
+      platformBtn.click();
+    }
+
+    // Ustaw domyślny model
+    const modelDropdown = modalPanel.querySelector('#model-dropdown');
+    if (modelDropdown && settings.ai_model) {
+      modelDropdown.value = settings.ai_model;
+    }
+
+    // Ustaw auto-send
+    const autoSendCheckbox = modalPanel.querySelector('#auto-send-checkbox');
+    if (autoSendCheckbox && settings.auto_send !== undefined) {
+      autoSendCheckbox.checked = settings.auto_send;
+    }
   }
 
   showProgress(modalPanel) {
@@ -565,32 +634,50 @@ class YouTubeTranscriptExtractor {
     if (backdrop) backdrop.remove();
     
     this.modalOpen = false;
+    this.retryCount = 0;
     console.log('🔒 Modal zamknięty');
   }
 
   async handleSummaryRequest(platform, model, analysisType, autoSend, modalPanel) {
     const progressText = modalPanel.querySelector('#progress-text');
+    const currentMethod = modalPanel.querySelector('#current-method');
     
     try {
       progressText.textContent = 'Pobieranie transkrypcji...';
       console.log('🚀 Rozpoczynam pobieranie transkrypcji...');
 
-      const transcript = await this.getTranscript();
-      
-      if (!transcript) {
-        throw new Error('Nie udało się pobrać transkrypcji. Sprawdź czy wideo ma dostępne napisy.');
+      let transcript = null;
+      this.retryCount = 0;
+
+      while (!transcript && this.retryCount < this.maxRetries) {
+        this.retryCount++;
+        
+        if (this.retryCount > 1) {
+          progressText.textContent = `Próba ${this.retryCount}/3...`;
+        }
+
+        transcript = await this.getTranscript(currentMethod);
+        
+        if (!transcript && this.retryCount < this.maxRetries) {
+          console.log(`⚠️ Próba ${this.retryCount} nieudana, czekam 2s przed kolejną...`);
+          await this.sleep(2000);
+        }
       }
 
-      console.log(`✅ Pobrano transkrypcję (${transcript.length} znaków)`);
+      if (!transcript) {
+        throw new Error('Nie udało się pobrać transkrypcji po 3 próbach. Sprawdź czy wideo ma dostępne napisy.');
+      }
+
+      console.log(`✅ Pobrano transkrypcję (${transcript.length} znaków) po ${this.retryCount} próbach`);
       progressText.textContent = 'Przygotowywanie promptu...';
 
       const settings = await this.getSettings();
       const platformName = platform === 'claude' ? 'Claude' : 'ChatGPT';
 
       const prompt = this.createAIPrompt(
-        transcript, 
-        document.title, 
-        window.location.href, 
+        transcript,
+        document.title,
+        window.location.href,
         platform,
         analysisType,
         settings
@@ -599,7 +686,6 @@ class YouTubeTranscriptExtractor {
       console.log(`📝 Utworzono prompt (${prompt.length} znaków)`);
       progressText.textContent = 'Kopiowanie do schowka...';
 
-      // Skopiuj do schowka
       try {
         await navigator.clipboard.writeText(prompt);
         console.log('✅ Prompt skopiowany do schowka');
@@ -610,18 +696,27 @@ class YouTubeTranscriptExtractor {
       progressText.textContent = `Otwieranie ${platformName}...`;
 
       // Wyślij do background script
-      chrome.runtime.sendMessage({
-        action: 'openAI',
-        platform: platform,
-        model: model,
-        prompt: prompt,
-        autoSend: autoSend,
-        settings: settings
-      });
+      try {
+        chrome.runtime.sendMessage({
+          action: 'openAI',
+          platform: platform,
+          model: model,
+          prompt: prompt,
+          autoSend: autoSend,
+          settings: settings
+        });
+      } catch (error) {
+        console.log('⚠️ Runtime message failed, opening manually:', error);
+        // Fallback - otwórz w nowej karcie
+        const urls = {
+          chatgpt: 'https://chatgpt.com/',
+          claude: 'https://claude.ai/'
+        };
+        window.open(urls[platform], '_blank');
+      }
 
       progressText.textContent = `✅ ${platformName} zostanie otwarty!`;
       
-      // Zamknij modal po 2 sekundach
       setTimeout(() => {
         this.closeModal();
       }, 2000);
@@ -631,7 +726,6 @@ class YouTubeTranscriptExtractor {
       progressText.textContent = `❌ ${error.message}`;
       progressText.style.color = '#dc2626';
       
-      // Przywróć przyciski po błędzie
       setTimeout(() => {
         const progressArea = modalPanel.querySelector('#progress-area');
         const proceedBtn = modalPanel.querySelector('#proceed-btn');
@@ -642,312 +736,952 @@ class YouTubeTranscriptExtractor {
         proceedBtn.style.opacity = '1';
         cancelBtn.disabled = false;
         cancelBtn.style.opacity = '1';
-      }, 3000);
+      }, 5000);
     }
   }
 
-  // Pobieranie transkrypcji
-  async getTranscript() {
-    try {
-      console.log('🔍 Rozpoczynam pobieranie transkrypcji...');
+  sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  async getTranscript(currentMethod) {
+    const methods = [
+      // Metoda 1: YouTube InnerTube API (najnowsza)
+      () => this.getTranscriptFromInnerTubeAPI(currentMethod),
       
-      // Metoda 1: window.ytInitialData
-      let transcript = await this.getTranscriptFromWindowData();
-      if (transcript) {
-        console.log('✅ Transkrypcja pobrana z window.ytInitialData');
-        return transcript;
-      }
-
-      // Metoda 2: ytInitialPlayerResponse
-      transcript = await this.getTranscriptFromPlayerResponse();
-      if (transcript) {
-        console.log('✅ Transkrypcja pobrana z ytInitialPlayerResponse');
-        return transcript;
-      }
-
-      // Metoda 3: DOM
-      transcript = await this.getTranscriptFromDOM();
-      if (transcript) {
-        console.log('✅ Transkrypcja pobrana z DOM');
-        return transcript;
-      }
-
-      // Metoda 4: Otwórz panel
-      transcript = await this.getTranscriptByOpeningPanel();
-      if (transcript) {
-        console.log('✅ Transkrypcja pobrana po otwarciu panelu');
-        return transcript;
-      }
-
-      throw new Error('Nie udało się pobrać transkrypcji. Sprawdź czy wideo ma napisy.');
-
-    } catch (error) {
-      console.error('❌ Błąd podczas pobierania transkrypcji:', error);
-      throw error;
-    }
-  }
-
-  async getTranscriptFromWindowData() {
-    try {
-      if (typeof window.ytInitialData === 'undefined') return null;
+      // Metoda 2: Kompletne dane z playerResponse z podpisami
+      () => this.getTranscriptFromPlayerResponseWithSignatures(currentMethod),
       
-      const videoId = this.extractVideoId();
-      if (!videoId) return null;
-
-      const searchForCaptions = (obj) => {
-        if (!obj || typeof obj !== 'object') return null;
-        
-        if (obj.captionTracks && Array.isArray(obj.captionTracks)) {
-          return obj.captionTracks;
-        }
-        
-        for (const key in obj) {
-          if (obj.hasOwnProperty(key)) {
-            const result = searchForCaptions(obj[key]);
-            if (result) return result;
-          }
-        }
-        return null;
-      };
-
-      const captionTracks = searchForCaptions(window.ytInitialData);
-      if (!captionTracks || captionTracks.length === 0) return null;
-
-      return await this.fetchTranscriptFromTracks(captionTracks);
-    } catch (error) {
-      console.error('Błąd w getTranscriptFromWindowData:', error);
-      return null;
-    }
-  }
-
-  async getTranscriptFromPlayerResponse() {
-    try {
-      const videoId = this.extractVideoId();
-      if (!videoId) return null;
-
-      if (window.ytInitialPlayerResponse) {
-        const captions = window.ytInitialPlayerResponse?.captions?.playerCaptionsTracklistRenderer?.captionTracks;
-        if (captions && captions.length > 0) {
-          return await this.fetchTranscriptFromTracks(captions);
-        }
-      }
-
-      const scripts = document.querySelectorAll('script');
-      for (const script of scripts) {
-        const content = script.textContent;
-        if (content && content.includes('ytInitialPlayerResponse')) {
-          const matches = content.match(/ytInitialPlayerResponse\s*=\s*(\{.*?\});/);
-          if (matches && matches[1]) {
-            try {
-              const playerResponse = JSON.parse(matches[1]);
-              const captions = playerResponse?.captions?.playerCaptionsTracklistRenderer?.captionTracks;
-              if (captions && captions.length > 0) {
-                return await this.fetchTranscriptFromTracks(captions);
-              }
-            } catch (e) {
-              continue;
-            }
-          }
-        }
-      }
-
-      return null;
-    } catch (error) {
-      console.error('Błąd w getTranscriptFromPlayerResponse:', error);
-      return null;
-    }
-  }
-
-  async fetchTranscriptFromTracks(captionTracks) {
-    try {
-      console.log('📝 Znalezione napisy:', captionTracks.map(c => c.languageCode || c.vssId));
-
-      let selectedCaption = null;
-
-      // Dodaj DEBUGGING - aby zobaczyć wszystkie dostępne napisy
-      console.log('🔍 DEBUGGING - Wszystkie dostępne napisy:');
-      captionTracks.forEach((caption, index) => {
-        console.log(`${index}: languageCode="${caption.languageCode}" vssId="${caption.vssId}"`);
-      });
-
-      // Funkcja sprawdzająca czy napisy są polskie
-      function isPolishCaption(caption) {
-        const code = (caption.languageCode || '').toLowerCase();
-        const vss = (caption.vssId || '').toLowerCase();
-
-        if (code.includes('pl')) return true;
-        if (vss.includes('pl')) return true;
-        if (vss.startsWith('a.pl')) return true;
-        if (vss.includes('.pl.')) return true;
-        if (vss.includes('.pl')) return true;
-        if (vss.endsWith('.pl')) return true;
-
-        return false;
-      }
-
-      // Funkcja sprawdzająca czy napisy są angielskie
-      function isEnglishCaption(caption) {
-        const code = (caption.languageCode || '').toLowerCase();
-        const vss = (caption.vssId || '').toLowerCase();
-
-        if (code.includes('en')) return true;
-        if (vss.includes('en')) return true;
-        if (vss.startsWith('a.en')) return true;
-
-        return false;
-      }
-
-      // 1. Najpierw szukaj polskich napisów
-      selectedCaption = captionTracks.find(isPolishCaption);
-      if (selectedCaption) {
-        console.log('🇵🇱 Znaleziono polskie napisy:', selectedCaption.languageCode || selectedCaption.vssId);
-      } else {
-        console.log('⚠️ Nie znaleziono polskich napisów, szukam angielskich...');
-
-        // 2. Potem angielskie
-        selectedCaption = captionTracks.find(isEnglishCaption);
-        if (selectedCaption) {
-          console.log('🇬🇧 Używam angielskich napisów:', selectedCaption.languageCode || selectedCaption.vssId);
-        } else {
-          console.log('⚠️ Nie znaleziono angielskich napisów, używam pierwszych dostępnych...');
-
-          // 3. W ostateczności pierwszy dostępny
-          selectedCaption = captionTracks[0];
-          if (selectedCaption) {
-            console.log('🌍 Używam pierwszych dostępnych napisów:', selectedCaption.languageCode || selectedCaption.vssId);
-          }
-        }
-      }
-
-      if (!selectedCaption.baseUrl) return null;
-
-      // Ensure the caption URL requests VTT format if no format is specified
-      const captionUrl = new URL(selectedCaption.baseUrl);
-      if (!captionUrl.searchParams.has('fmt')) {
-        captionUrl.searchParams.set('fmt', 'vtt');
-      }
-
-      const response = await fetch(captionUrl.toString());
-      if (!response.ok) {
-        console.error('Błąd pobierania transkrypcji:', response.status);
-        return null;
-      }
-
-      const xmlText = await response.text();
-      console.log('📄 Pobrano XML transkrypcji, długość:', xmlText.length);
-
-      const parser = new DOMParser();
-      const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
-      const textElements = xmlDoc.querySelectorAll('text');
-
-      let transcript = '';
-
-      if (textElements.length > 0) {
-        textElements.forEach((element) => {
-          const text = element.textContent?.trim();
-          if (text) {
-            const decodedText = this.decodeHTMLEntities(text);
-            transcript += decodedText + ' ';
-          }
-        });
-      } else {
-        console.log('❌ Brak elementów text w XML, próba parsowania VTT');
-        const lines = xmlText.split(/\r?\n/);
-        for (const line of lines) {
-          const trimmed = line.trim();
-          if (!trimmed || trimmed.startsWith('WEBVTT') || /^\d+$/.test(trimmed) || /--\>/.test(trimmed)) {
-            continue;
-          }
-          transcript += trimmed + ' ';
-        }
-      }
-
-      const finalTranscript = transcript.trim();
-      console.log(`✅ Transkrypcja gotowa, długość: ${finalTranscript.length} znaków`);
-
-      return finalTranscript || null;
-
-    } catch (error) {
-      console.error('Błąd w fetchTranscriptFromTracks:', error);
-      return null;
-    }
-  }
-
-  decodeHTMLEntities(text) {
-    const textArea = document.createElement('textarea');
-    textArea.innerHTML = text;
-    return textArea.value;
-  }
-
-  async getTranscriptFromDOM() {
-    const transcriptSelectors = [
-      'ytd-transcript-segment-renderer .segment-text',
-      '.ytd-transcript-segment-renderer .segment-text',
-      '[class*="transcript"] [class*="segment-text"]',
-      '[class*="transcript"] [class*="cue-text"]'
+      // Metoda 3: Szukanie w DOM (napisy już załadowane)
+      () => this.getTranscriptFromDOMReal(currentMethod),
+      
+      // Metoda 4: Backup przez window.fetch z wszystkimi parametrami
+      () => this.getTranscriptWithCompleteParameters(currentMethod)
     ];
 
-    for (const selector of transcriptSelectors) {
-      const elements = document.querySelectorAll(selector);
-      if (elements.length > 0) {
-        let transcript = '';
-        elements.forEach(element => {
-          const text = element.textContent?.trim();
-          if (text) transcript += text + ' ';
-        });
-        if (transcript.trim()) return transcript.trim();
+    const methodNames = ['InnerTube API', 'PlayerResponse+Signatures', 'DOM Real', 'Complete Parameters'];
+
+    for (let i = 0; i < methods.length; i++) {
+      try {
+        console.log(`🔄 Próbuję metodę ${i + 1}: ${methodNames[i]}`);
+        if (currentMethod) currentMethod.textContent = methodNames[i];
+        
+        const transcript = await methods[i]();
+        
+        if (transcript && transcript.length > 200) {
+          console.log(`✅ Sukces z metodą: ${methodNames[i]} (${transcript.length} znaków)`);
+          return transcript;
+        } else {
+          console.log(`⚠️ Metoda ${methodNames[i]} zwróciła za krótką transkrypcję: ${transcript?.length || 0} znaków`);
+        }
+      } catch (error) {
+        console.log(`❌ Błąd w metodzie ${methodNames[i]}:`, error.message);
+      }
+      
+      if (i < methods.length - 1) {
+        await this.sleep(1000);
       }
     }
 
     return null;
   }
 
-  async getTranscriptByOpeningPanel() {
-    return new Promise((resolve) => {
-      const transcriptButtonSelectors = [
-        'button[aria-label*="transcript"]',
-        'button[aria-label*="Transcript"]', 
-        'button[aria-label*="transkrypcj"]',
-        'button[aria-label*="Transkrypcj"]',
-        'button[aria-label*="Show transcript"]',
-        'button[aria-label*="Pokaż transkrypcję"]',
-        '[role="button"][aria-label*="transcript"]',
-        'yt-button-renderer[aria-label*="transcript"]'
-      ];
-
-      let transcriptButton = null;
-      for (const selector of transcriptButtonSelectors) {
-        transcriptButton = document.querySelector(selector);
-        if (transcriptButton) break;
+  async getTranscriptFromInnerTubeAPI(currentMethod) {
+    try {
+      console.log('🔍 Próbuję YouTube InnerTube API...');
+      
+      const videoId = this.extractVideoId();
+      if (!videoId) {
+        throw new Error('Nie można wyodrębnić videoId');
       }
 
-      if (!transcriptButton) {
-        const buttons = document.querySelectorAll('button, [role="button"]');
-        for (const button of buttons) {
-          const text = button.textContent?.toLowerCase();
-          const ariaLabel = button.getAttribute('aria-label')?.toLowerCase();
-          if (text?.includes('transcript') || text?.includes('transkrypcj') ||
-              ariaLabel?.includes('transcript') || ariaLabel?.includes('transkrypcj')) {
-            transcriptButton = button;
-            break;
+      // YouTube InnerTube API endpoint
+      const innerTubeUrl = 'https://www.youtube.com/youtubei/v1/player';
+      
+      // Pozyskaj klucz API i parametry kontekstu z strony
+      const apiKey = this.extractAPIKey();
+      const context = this.getYouTubeContext();
+      
+      const requestBody = {
+        videoId: videoId,
+        context: context,
+        params: ''
+      };
+
+      console.log('📡 InnerTube request:', { videoId, context });
+
+      const response = await fetch(`${innerTubeUrl}?key=${apiKey}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'User-Agent': navigator.userAgent,
+          'Referer': window.location.href,
+          'Origin': 'https://www.youtube.com'
+        },
+        body: JSON.stringify(requestBody)
+      });
+
+      if (!response.ok) {
+        throw new Error(`InnerTube API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('📄 InnerTube response otrzymana');
+
+      // Wyodrębnij captionTracks z odpowiedzi
+      const captionTracks = data?.captions?.playerCaptionsTracklistRenderer?.captionTracks;
+      
+      if (!captionTracks || captionTracks.length === 0) {
+        throw new Error('Brak captionTracks w InnerTube API');
+      }
+
+      console.log('📋 InnerTube napisy:', captionTracks.map(c => ({
+        vssId: c.vssId,
+        languageCode: c.languageCode,
+        name: c.name?.simpleText,
+        kind: c.kind,
+        isTranslatable: c.isTranslatable
+      })));
+
+      // Wybierz najlepsze napisy z priorytetem dla polskich
+      const bestCaption = this.selectBestCaptionReal(captionTracks);
+      if (!bestCaption) {
+        throw new Error('Nie znaleziono odpowiednich napisów w InnerTube');
+      }
+
+      console.log('🎯 InnerTube wybrane napisy:', {
+        language: bestCaption.languageCode || bestCaption.vssId,
+        name: bestCaption.name?.simpleText,
+        kind: bestCaption.kind,
+        isTranslatable: bestCaption.isTranslatable
+      });
+
+      // Pobierz transkrypcję używając baseUrl z podpisem
+      return await this.fetchTranscriptFromBaseUrl(bestCaption.baseUrl);
+
+    } catch (error) {
+      console.error('❌ Błąd w getTranscriptFromInnerTubeAPI:', error);
+      throw error;
+    }
+  }
+
+  async getTranscriptFromPlayerResponseWithSignatures(currentMethod) {
+    try {
+      console.log('🔍 Szukam playerResponse z podpisami...');
+      
+      // Szukaj w różnych miejscach na stronie
+      const scripts = document.querySelectorAll('script');
+      let playerResponse = null;
+      
+      for (const script of scripts) {
+        const content = script.textContent || '';
+        
+        // Różne wzorce dla playerResponse
+        const patterns = [
+          /var\s+ytInitialPlayerResponse\s*=\s*(\{.*?\});/s,
+          /ytInitialPlayerResponse\s*=\s*(\{.*?\});/s,
+          /window\["ytInitialPlayerResponse"\]\s*=\s*(\{.*?\});/s,
+          /"playerResponse":\s*(\{.*?\})(?:,|\})/s,
+          /playerResponse['"]:\s*(\{.*?\})/s
+        ];
+
+        for (const pattern of patterns) {
+          const match = content.match(pattern);
+          if (match) {
+            try {
+              const response = JSON.parse(match[1]);
+              if (response.captions?.playerCaptionsTracklistRenderer?.captionTracks) {
+                playerResponse = response;
+                console.log('✅ Znaleziono playerResponse z napisami');
+                break;
+              }
+            } catch (e) {
+              continue;
+            }
           }
+        }
+        
+        if (playerResponse) break;
+      }
+
+      if (!playerResponse) {
+        throw new Error('Nie znaleziono playerResponse z napisami');
+      }
+
+      const captionTracks = playerResponse.captions.playerCaptionsTracklistRenderer.captionTracks;
+      
+      console.log('📋 PlayerResponse napisy:', captionTracks.map(c => ({
+        vssId: c.vssId,
+        languageCode: c.languageCode,
+        name: c.name?.simpleText,
+        hasBaseUrl: !!c.baseUrl,
+        kind: c.kind
+      })));
+
+      // Wybierz najlepsze napisy
+      const bestCaption = this.selectBestCaptionReal(captionTracks);
+      if (!bestCaption || !bestCaption.baseUrl) {
+        throw new Error('Nie znaleziono napisów z baseUrl');
+      }
+
+      console.log('🎯 PlayerResponse wybrane napisy:', {
+        language: bestCaption.languageCode || bestCaption.vssId,
+        name: bestCaption.name?.simpleText,
+        baseUrlLength: bestCaption.baseUrl.length
+      });
+
+      // baseUrl już zawiera signature i wszystkie potrzebne parametry
+      return await this.fetchTranscriptFromBaseUrl(bestCaption.baseUrl);
+
+    } catch (error) {
+      console.error('❌ Błąd w getTranscriptFromPlayerResponseWithSignatures:', error);
+      throw error;
+    }
+  }
+
+  async getTranscriptFromDOMReal(currentMethod) {
+    console.log('🔍 Szukanie rzeczywistych napisów w DOM...');
+    
+    // Selektory dla rzeczywistych napisów YouTube
+    const realSelectors = [
+      // Panel transkrypcji YouTube
+      'ytd-transcript-renderer .segment-text',
+      'ytd-transcript-segment-renderer .segment-text',
+      
+      // Napisy w odtwarzaczu  
+      '.ytp-caption-segment',
+      '.caption-window .ytp-caption-segment',
+      
+      // Najnowsze selektory YouTube 2024
+      '[class*="transcript"] [class*="segment-text"]',
+      '[class*="transcript"] [class*="cue-text"]',
+      
+      // Automatyczne napisy
+      '[aria-label*="Caption"] .segment-text',
+      '[role="button"][aria-label*="transcript"] .segment-text'
+    ];
+
+    let transcript = '';
+    let foundElements = 0;
+
+    for (const selector of realSelectors) {
+      try {
+        const elements = document.querySelectorAll(selector);
+        console.log(`🔍 Selektor "${selector}": ${elements.length} elementów`);
+        
+        if (elements.length > 5) { // Minimum 5 elementów dla sensownej transkrypcji
+          foundElements = elements.length;
+          const textParts = [];
+          
+          elements.forEach((element, index) => {
+            const text = this.extractTextFromElementReal(element);
+            if (text && text.length > 1) {
+              textParts.push(text);
+              
+              if (index < 3) {
+                console.log(`📝 Element ${index}: "${text.substring(0, 50)}..."`);
+              }
+            }
+          });
+          
+          if (textParts.length > 5) {
+            transcript = textParts.join(' ');
+            
+            if (transcript.trim().length > 200) {
+              console.log(`✅ DOM Real sukces: ${foundElements} elementów, ${transcript.length} znaków`);
+              return this.normalizeText(transcript.trim());
+            }
+          }
+        }
+      } catch (e) {
+        console.log(`❌ Błąd selektora ${selector}:`, e.message);
+      }
+    }
+
+    console.log(`⚠️ DOM Real nie znalazł wystarczających napisów`);
+    return null;
+  }
+
+  async getTranscriptWithCompleteParameters(currentMethod) {
+    try {
+      console.log('🔍 Próba z kompletnymi parametrami...');
+      
+      const videoId = this.extractVideoId();
+      if (!videoId) {
+        throw new Error('Brak videoId');
+      }
+
+      // Pozyskaj wszystkie potrzebne parametry z strony
+      const params = this.extractYouTubeParameters();
+      
+      // URLs z kompletnymi parametrami dla różnych języków
+      const urls = [
+        // Polskie automatyczne napisy
+        `https://www.youtube.com/api/timedtext?v=${videoId}&lang=pl&kind=asr&${params}`,
+        `https://www.youtube.com/api/timedtext?v=${videoId}&lang=pl-PL&kind=asr&${params}`,
+        
+        // Tłumaczone napisy en->pl
+        `https://www.youtube.com/api/timedtext?v=${videoId}&lang=en&tlang=pl&kind=asr&${params}`,
+        `https://www.youtube.com/api/timedtext?v=${videoId}&lang=en&tlang=pl-PL&kind=asr&${params}`,
+        
+        // Angielskie automatyczne napisy jako fallback
+        `https://www.youtube.com/api/timedtext?v=${videoId}&lang=en&kind=asr&${params}`,
+        `https://www.youtube.com/api/timedtext?v=${videoId}&lang=en&${params}`
+      ];
+
+      for (const url of urls) {
+        try {
+          console.log(`📡 Próbuję: ${url.substring(0, 100)}...`);
+          
+          const response = await fetch(url, {
+            headers: {
+              'Accept': 'text/xml,application/xml,text/vtt,text/plain,*/*',
+              'Accept-Language': 'pl-PL,pl;q=0.9,en;q=0.8',
+              'User-Agent': navigator.userAgent,
+              'Referer': window.location.href,
+              'Origin': 'https://www.youtube.com'
+            }
+          });
+
+          if (response.ok) {
+            const text = await response.text();
+            console.log(`📄 Odpowiedź: ${text.length} znaków`);
+            
+            if (text.length > 100 && !text.includes('error') && !text.includes('<error>')) {
+              const parsed = this.parseSubtitleContent(text);
+              if (parsed && parsed.length > 200) {
+                console.log(`✅ Complete Parameters sukces: ${parsed.length} znaków`);
+                return parsed;
+              }
+            }
+          } else {
+            console.log(`❌ HTTP ${response.status}`);
+          }
+        } catch (e) {
+          console.log(`❌ Błąd URL:`, e.message);
+          continue;
         }
       }
 
-      if (!transcriptButton) {
-        console.log('❌ Nie znaleziono przycisku transkrypcji');
-        resolve(null);
-        return;
+      throw new Error('Wszystkie URLs z kompletnymi parametrami zawiodły');
+
+    } catch (error) {
+      console.error('❌ Błąd w getTranscriptWithCompleteParameters:', error);
+      throw error;
+    }
+  }
+
+  extractAPIKey() {
+    // Pozyskaj klucz API YouTube z strony
+    const scripts = document.querySelectorAll('script');
+    
+    for (const script of scripts) {
+      const content = script.textContent || '';
+      
+      // Szukaj wzorców API key
+      const patterns = [
+        /"INNERTUBE_API_KEY":\s*"([^"]+)"/,
+        /"innertubeApiKey":\s*"([^"]+)"/,
+        /key=([A-Za-z0-9_-]+)/,
+        /"key":\s*"([^"]+)"/
+      ];
+      
+      for (const pattern of patterns) {
+        const match = content.match(pattern);
+        if (match) {
+          console.log('🔑 Znaleziono API key');
+          return match[1];
+        }
+      }
+    }
+    
+    // Fallback do domyślnego klucza YouTube
+    console.log('⚠️ Używam domyślnego API key');
+    return 'AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8'; // Publiczny klucz YouTube
+  }
+
+  getYouTubeContext() {
+    // Kontekst dla YouTube InnerTube API
+    return {
+      client: {
+        hl: 'pl',
+        gl: 'PL',
+        clientName: 'WEB',
+        clientVersion: '2.20241210.01.00',
+        userAgent: navigator.userAgent,
+        timeZone: 'Europe/Warsaw',
+        browserName: 'Chrome',
+        browserVersion: '120.0.0.0',
+        osName: 'Windows',
+        osVersion: '10.0',
+        platform: 'DESKTOP',
+        clientFormFactor: 'UNKNOWN_FORM_FACTOR'
+      },
+      user: {
+        lockedSafetyMode: false
+      },
+      request: {
+        useSsl: true,
+        internalExperimentFlags: [],
+        consistencyTokenJars: []
+      }
+    };
+  }
+
+  extractYouTubeParameters() {
+    // Pozyskaj parametry potrzebne dla timedtext API
+    const scripts = document.querySelectorAll('script');
+    let params = 'hl=pl&ip=0.0.0.0&ipbits=0';
+    
+    for (const script of scripts) {
+      const content = script.textContent || '';
+      
+      // Szukaj parametrów
+      const patterns = {
+        'caps': /caps[=:](\w+)/,
+        'opi': /opi[=:](\d+)/,
+        'exp': /exp[=:](\w+)/,
+        'xoaf': /xoaf[=:](\d+)/,
+        'key': /key[=:](\w+)/
+      };
+      
+      for (const [param, pattern] of Object.entries(patterns)) {
+        const match = content.match(pattern);
+        if (match) {
+          params += `&${param}=${match[1]}`;
+        }
+      }
+    }
+    
+    console.log('⚙️ Parametry YouTube:', params);
+    return params;
+  }
+
+  selectBestCaptionReal(captionTracks) {
+    // Inteligentna selekcja napisów - priorytet dla języka oryginalnego
+    
+    // Krok 1: Wykryj język oryginalny filmu
+    const originalLanguage = this.detectVideoLanguage();
+    console.log(`🎯 Wykryty język oryginalny filmu: ${originalLanguage}`);
+    
+    // Priorytet 1: Napisy w języku oryginalnym filmu
+    if (originalLanguage && originalLanguage !== 'pl') {
+      const originalCaption = captionTracks.find(c => {
+        const code = (c.languageCode || '').toLowerCase();
+        const vss = (c.vssId || '').toLowerCase();
+        
+        return code === originalLanguage.toLowerCase() || 
+               code.startsWith(originalLanguage.toLowerCase() + '-') ||
+               vss.includes(originalLanguage.toLowerCase());
+      });
+      
+      if (originalCaption) {
+        console.log(`🌍 Znaleziono napisy w języku oryginalnym: ${originalLanguage}`);
+        return originalCaption;
+      }
+      
+      // Spróbuj znaleźć automatyczne napisy w języku oryginalnym
+      const originalAuto = captionTracks.find(c => {
+        const code = (c.languageCode || '').toLowerCase();
+        const kind = (c.kind || '').toLowerCase();
+        
+        return (code === originalLanguage.toLowerCase() || 
+                code.startsWith(originalLanguage.toLowerCase() + '-')) && 
+               (kind === 'asr' || c.name?.simpleText?.includes('auto'));
+      });
+      
+      if (originalAuto) {
+        console.log(`🤖 Znaleziono automatyczne napisy w języku oryginalnym: ${originalLanguage}`);
+        return originalAuto;
+      }
+    }
+    
+    // Priorytet 2: Polskie napisy (jeśli film po polsku lub nie znaleziono oryginalnych)
+    if (originalLanguage === 'pl' || originalLanguage === 'polish') {
+      console.log('🇵🇱 Film po polsku - szukam polskich napisów');
+    } else {
+      console.log('🔄 Nie znaleziono napisów w języku oryginalnym - szukam polskich');
+    }
+    
+    for (const variant of ['pl', 'pl-PL', 'polish']) {
+      const polishCaption = captionTracks.find(c => {
+        const code = (c.languageCode || '').toLowerCase();
+        const vss = (c.vssId || '').toLowerCase();
+        const name = (c.name?.simpleText || '').toLowerCase();
+        
+        return code === variant || 
+               code.startsWith(variant + '-') ||
+               vss.includes(variant) ||
+               name.includes('pol');
+      });
+      
+      if (polishCaption) {
+        console.log(`🇵🇱 Znaleziono polskie napisy: ${variant}`);
+        return polishCaption;
+      }
+    }
+
+    // Priorytet 3: Angielskie napisy z automatycznym tłumaczeniem na polski
+    const englishForTranslation = captionTracks.find(c => {
+      const code = (c.languageCode || '').toLowerCase();
+      const kind = (c.kind || '').toLowerCase();
+      
+      return code.startsWith('en') && (kind === 'asr' || c.isTranslatable);
+    });
+
+    if (englishForTranslation && originalLanguage !== 'en') {
+      console.log('🔄 Znaleziono angielskie napisy - tłumaczę na polski');
+      // Modyfikuj URL dla tłumaczenia na polski tylko jeśli film nie jest po angielsku
+      if (englishForTranslation.baseUrl && englishForTranslation.isTranslatable) {
+        try {
+          const url = new URL(englishForTranslation.baseUrl);
+          url.searchParams.set('tlang', 'pl');
+          englishForTranslation.baseUrl = url.toString();
+          console.log('✅ Dodano automatyczne tłumaczenie na polski');
+        } catch (e) {
+          console.log('⚠️ Nie udało się dodać tłumaczenia');
+        }
+      }
+      return englishForTranslation;
+    }
+
+    // Priorytet 4: Angielskie napisy (bez tłumaczenia)
+    const englishCaption = captionTracks.find(c => {
+      const code = (c.languageCode || '').toLowerCase();
+      return code.startsWith('en');
+    });
+
+    if (englishCaption) {
+      console.log('🇺🇸 Znaleziono angielskie napisy (bez tłumaczenia)');
+      return englishCaption;
+    }
+
+    // Priorytet 5: Pierwsze dostępne napisy
+    if (captionTracks.length > 0) {
+      console.log('📝 Używam pierwszych dostępnych napisów');
+      return captionTracks[0];
+    }
+
+    return null;
+  }
+
+  detectVideoLanguage() {
+    // Wykrywa język oryginalny filmu na podstawie różnych wskaźników
+    try {
+      console.log('🔍 Wykrywam język oryginalny filmu...');
+      
+      // Metoda 1: Sprawdź HTML lang attribute
+      const htmlLang = document.documentElement.lang;
+      if (htmlLang && htmlLang !== 'en') {
+        console.log(`📍 HTML lang: ${htmlLang}`);
+      }
+      
+      // Metoda 2: Sprawdź język z playerResponse
+      const scripts = document.querySelectorAll('script');
+      let detectedLang = null;
+      
+      for (const script of scripts) {
+        const content = script.textContent || '';
+        
+        // Szukaj języka w metadanych wideo
+        const langPatterns = [
+          /"defaultAudioLanguage":\s*"([^"]+)"/,
+          /"audioLanguage":\s*"([^"]+)"/,
+          /"language":\s*"([^"]+)"/,
+          /"defaultLanguage":\s*"([^"]+)"/,
+          /"videoDetails":[^}]*"language":\s*"([^"]+)"/
+        ];
+        
+        for (const pattern of langPatterns) {
+          const match = content.match(pattern);
+          if (match && match[1] && match[1] !== 'und') {
+            detectedLang = match[1].split('-')[0]; // Weź tylko główny kod języka
+            console.log(`📊 Wykryto język z metadanych: ${detectedLang}`);
+            break;
+          }
+        }
+        
+        if (detectedLang) break;
+      }
+      
+      // Metoda 3: Analiza tytułu wideo (podstawowa heurystyka)
+      const title = document.title;
+      const channelName = this.getChannelName();
+      
+      // Sprawdź czy tytuł/kanał sugeruje język
+      const languageIndicators = {
+        'en': [/\ben\b/i, /english/i, /\busa\b/i, /\buk\b/i, /\bus\b/i],
+        'es': [/español/i, /spanish/i, /\bes\b/i],
+        'fr': [/français/i, /french/i, /\bfr\b/i],
+        'de': [/deutsch/i, /german/i, /\bde\b/i],
+        'it': [/italiano/i, /italian/i, /\bit\b/i],
+        'pt': [/português/i, /portuguese/i, /\bpt\b/i, /brasil/i],
+        'ru': [/русский/i, /russian/i, /\bru\b/i],
+        'ja': [/日本語/i, /japanese/i, /\bjp\b/i],
+        'ko': [/한국어/i, /korean/i, /\bkr\b/i],
+        'zh': [/中文/i, /chinese/i, /\bcn\b/i],
+        'pl': [/polski/i, /polish/i, /\bpl\b/i, /polska/i]
+      };
+      
+      for (const [lang, patterns] of Object.entries(languageIndicators)) {
+        for (const pattern of patterns) {
+          if (pattern.test(title) || pattern.test(channelName)) {
+            console.log(`🏷️ Wykryto język z tytułu/kanału: ${lang}`);
+            return lang;
+          }
+        }
+      }
+      
+      // Metoda 4: Sprawdź URL kanału dla wskazówek geograficznych
+      const channelUrl = this.getChannelUrl();
+      if (channelUrl) {
+        const geoIndicators = {
+          'en': ['/c/', '/user/', '@', 'youtube.com'],
+          'pl': ['/kanał/', 'polska', '.pl'],
+          'de': ['/kanal/', 'deutschland', '.de'],
+          'fr': ['/chaîne/', 'france', '.fr'],
+          'es': ['/canal/', 'españa', '.es']
+        };
+        
+        for (const [lang, indicators] of Object.entries(geoIndicators)) {
+          if (indicators.some(indicator => channelUrl.includes(indicator))) {
+            console.log(`🌍 Wykryto język z URL kanału: ${lang}`);
+            if (lang !== 'en' || !detectedLang) { // Preferuj nie-angielskie języki
+              return lang;
+            }
+          }
+        }
+      }
+      
+      // Zwróć wykryty język z metadanych lub domyślnie angielski
+      const finalLang = detectedLang || 'en';
+      console.log(`🎯 Ostateczny wykryty język: ${finalLang}`);
+      return finalLang;
+      
+    } catch (error) {
+      console.log('⚠️ Błąd wykrywania języka:', error);
+      return 'en'; // Domyślnie angielski
+    }
+  }
+  
+  getChannelName() {
+    // Pobiera nazwę kanału
+    const selectors = [
+      'ytd-channel-name a',
+      '.ytd-channel-name a',
+      '#owner-name a',
+      '.owner-name a',
+      'ytd-video-owner-renderer a'
+    ];
+    
+    for (const selector of selectors) {
+      const element = document.querySelector(selector);
+      if (element && element.textContent) {
+        return element.textContent.trim();
+      }
+    }
+    
+    return '';
+  }
+  
+  getChannelUrl() {
+    // Pobiera URL kanału
+    const selectors = [
+      'ytd-channel-name a',
+      '.ytd-channel-name a',
+      '#owner-name a',
+      '.owner-name a',
+      'ytd-video-owner-renderer a'
+    ];
+    
+    for (const selector of selectors) {
+      const element = document.querySelector(selector);
+      if (element && element.href) {
+        return element.href;
+      }
+    }
+    
+    return '';
+  }
+
+  async fetchTranscriptFromBaseUrl(baseUrl) {
+    try {
+      if (!baseUrl) {
+        throw new Error('Brak baseUrl');
       }
 
-      console.log('🔍 Znaleziono przycisk transkrypcji, klikam...');
-      transcriptButton.click();
+      // Upewnij się że URL jest kompletny
+      let fullUrl = baseUrl;
+      if (fullUrl.startsWith('//')) {
+        fullUrl = 'https:' + fullUrl;
+      } else if (fullUrl.startsWith('/')) {
+        fullUrl = 'https://www.youtube.com' + fullUrl;
+      }
 
-      setTimeout(async () => {
-        const transcript = await this.getTranscriptFromDOM();
-        resolve(transcript);
-      }, 3000);
-    });
+      console.log('📡 Pobieranie z baseUrl:', fullUrl.substring(0, 100) + '...');
+
+      const response = await fetch(fullUrl, {
+        headers: {
+          'Accept': 'text/xml,application/xml,text/vtt,text/plain,*/*',
+          'Accept-Language': 'pl-PL,pl;q=0.9,en;q=0.8',
+          'User-Agent': navigator.userAgent,
+          'Referer': window.location.href,
+          'Origin': 'https://www.youtube.com'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const text = await response.text();
+      console.log(`📄 Pobrano ${text.length} znaków`);
+
+      if (text.length < 50) {
+        throw new Error('Zbyt krótka odpowiedź');
+      }
+
+      if (text.includes('<error>') || text.includes('error')) {
+        throw new Error('API zwróciło błąd');
+      }
+
+      const parsed = this.parseSubtitleContent(text);
+      
+      if (!parsed || parsed.length < 100) {
+        throw new Error('Nie udało się sparsować napisów');
+      }
+
+      console.log(`✅ Pomyślnie sparsowano ${parsed.length} znaków`);
+      return parsed;
+
+    } catch (error) {
+      console.error('❌ Błąd w fetchTranscriptFromBaseUrl:', error);
+      throw error;
+    }
+  }
+
+  extractTextFromElementReal(element) {
+    // Rzeczywiste metody wyciągania tekstu z elementów YouTube
+    let text = '';
+    
+    // Metoda 1: Podstawowy textContent
+    text = element.textContent?.trim();
+    if (text && text.length > 1 && !text.match(/^\d+$/)) {
+      return text;
+    }
+    
+    // Metoda 2: innerText
+    text = element.innerText?.trim();
+    if (text && text.length > 1 && !text.match(/^\d+$/)) {
+      return text;
+    }
+    
+    // Metoda 3: innerHTML bez tagów
+    text = element.innerHTML?.replace(/<[^>]*>/g, '').trim();
+    if (text && text.length > 1 && !text.match(/^\d+$/)) {
+      return text;
+    }
+    
+    // Metoda 4: data attributes
+    const dataText = element.getAttribute('data-text') || 
+                     element.getAttribute('data-content') ||
+                     element.getAttribute('aria-label');
+    if (dataText && dataText.trim().length > 1) {
+      return dataText.trim();
+    }
+    
+    return '';
+  }
+
+  parseSubtitleContent(content) {
+    try {
+      let transcript = '';
+      
+      console.log('📄 Parsowanie napisów...');
+      console.log(`📊 Długość content: ${content.length}, pierwsze 200 znaków: ${content.substring(0, 200)}`);
+
+      // Wykryj format i parsuj odpowiednio
+      if (content.includes('WEBVTT') || content.includes('-->')) {
+        // VTT format
+        transcript = this.parseVTTFormat(content);
+      } else if (content.includes('<text') || content.includes('<transcript>')) {
+        // XML format
+        transcript = this.parseXMLFormat(content);
+      } else if (content.includes('"text":') || content.includes('"events":')) {
+        // JSON format
+        transcript = this.parseJSONFormat(content);
+      } else {
+        // Plain text format
+        transcript = this.parsePlainTextFormat(content);
+      }
+
+      if (!transcript || transcript.length < 50) {
+        console.log('⚠️ Nie udało się sparsować lub za krótki tekst');
+        return null;
+      }
+
+      const normalized = this.normalizeText(transcript);
+      console.log(`✅ Sparsowano ${normalized.length} znaków tekstu`);
+      
+      return normalized;
+
+    } catch (error) {
+      console.error('❌ Błąd parsowania:', error);
+      return null;
+    }
+  }
+
+  parseVTTFormat(content) {
+    const lines = content.split(/\r?\n/);
+    let transcript = '';
+    
+    for (const line of lines) {
+      const trimmed = line.trim();
+      
+      // Pomiń linie VTT metadata
+      if (!trimmed || 
+          trimmed.startsWith('WEBVTT') || 
+          trimmed.startsWith('NOTE') ||
+          /^\d+$/.test(trimmed) || 
+          /\d{2}:\d{2}:\d{2}[,\.]\d{3}\s*-->\s*\d{2}:\d{2}:\d{2}[,\.]\d{3}/.test(trimmed) ||
+          trimmed.startsWith('STYLE') ||
+          trimmed.startsWith('REGION')) {
+        continue;
+      }
+      
+      // Wyczyść linie z tagów i dodaj do transkrypcji
+      const cleanLine = trimmed
+        .replace(/<[^>]*>/g, '') // usuń tagi HTML/VTT
+        .replace(/&[a-zA-Z0-9#]+;/g, '') // usuń entity HTML
+        .replace(/\{[^}]*\}/g, '') // usuń style VTT
+        .replace(/\[[^\]]*\]/g, '') // usuń znaczniki audio [música], [applause]
+        .trim();
+      
+      if (cleanLine && cleanLine.length > 1) {
+        transcript += cleanLine + ' ';
+      }
+    }
+    
+    return transcript.trim();
+  }
+
+  parseXMLFormat(content) {
+    try {
+      const parser = new DOMParser();
+      const xmlDoc = parser.parseFromString(content, 'text/xml');
+      
+      // Sprawdź błędy parsowania
+      const parserError = xmlDoc.querySelector('parsererror');
+      if (parserError) {
+        throw new Error('XML parsing error');
+      }
+      
+      const textElements = xmlDoc.querySelectorAll('text');
+      let transcript = '';
+      
+      textElements.forEach(element => {
+        const text = element.textContent?.trim();
+        if (text) {
+          const decodedText = this.decodeHTMLEntities(text);
+          transcript += decodedText + ' ';
+        }
+      });
+      
+      return transcript.trim();
+    } catch (error) {
+      console.log('⚠️ Błąd parsowania XML:', error);
+      return '';
+    }
+  }
+
+  parseJSONFormat(content) {
+    try {
+      const jsonData = JSON.parse(content);
+      let transcript = '';
+      
+      // YouTube JSON format for captions
+      if (jsonData.events && Array.isArray(jsonData.events)) {
+        jsonData.events.forEach(event => {
+          if (event.segs && Array.isArray(event.segs)) {
+            event.segs.forEach(seg => {
+              if (seg.utf8) {
+                transcript += seg.utf8 + ' ';
+              }
+            });
+          }
+        });
+      } 
+      // Generic JSON array format
+      else if (Array.isArray(jsonData)) {
+        jsonData.forEach(item => {
+          if (item.text) {
+            transcript += item.text + ' ';
+          } else if (item.content) {
+            transcript += item.content + ' ';
+          }
+        });
+      }
+      
+      return transcript.trim();
+    } catch (error) {
+      console.log('⚠️ Błąd parsowania JSON:', error);
+      return '';
+    }
+  }
+
+  parsePlainTextFormat(content) {
+    const lines = content.split(/\r?\n/);
+    let transcript = '';
+    
+    for (const line of lines) {
+      const trimmed = line.trim();
+      
+      if (trimmed && 
+          trimmed.length > 2 && 
+          !trimmed.match(/^\d+$/) &&
+          !trimmed.match(/^\d{2}:\d{2}:\d{2}/)) {
+        
+        // Usuń znaczniki czasu i inne metadane
+        const cleanLine = trimmed
+          .replace(/^\d+:\d+:\d+[,\.]?\d*\s*-->\s*\d+:\d+:\d+[,\.]?\d*/, '')
+          .replace(/^\d+\s*$/, '')
+          .replace(/^<[^>]+>/, '')
+          .replace(/\[[^\]]*\]/g, '')
+          .trim();
+          
+        if (cleanLine && cleanLine.length > 1) {
+          transcript += cleanLine + ' ';
+        }
+      }
+    }
+    
+    return transcript.trim();
+  }
+
+  normalizeText(text) {
+    return text
+      // Podstawowe entity HTML
+      .replace(/&#39;/g, "'")
+      .replace(/&quot;/g, '"')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      
+      // Polskie znaki Unicode
+      .replace(/\u0105/g, 'ą').replace(/\u0104/g, 'Ą')
+      .replace(/\u0107/g, 'ć').replace(/\u0106/g, 'Ć')
+      .replace(/\u0119/g, 'ę').replace(/\u0118/g, 'Ę')
+      .replace(/\u0142/g, 'ł').replace(/\u0141/g, 'Ł')
+      .replace(/\u0144/g, 'ń').replace(/\u0143/g, 'Ń')
+      .replace(/\u00f3/g, 'ó').replace(/\u00d3/g, 'Ó')
+      .replace(/\u015b/g, 'ś').replace(/\u015a/g, 'Ś')
+      .replace(/\u017a/g, 'ź').replace(/\u0179/g, 'Ź')
+      .replace(/\u017c/g, 'ż').replace(/\u017b/g, 'Ż')
+      
+      // Czyść białe znaki
+      .replace(/\s+/g, ' ')
+      .replace(/\u00a0/g, ' ') // non-breaking space
+      .trim();
   }
 
   extractVideoId() {
@@ -956,24 +1690,39 @@ class YouTubeTranscriptExtractor {
     return match ? match[1] : null;
   }
 
+  decodeHTMLEntities(text) {
+    const textArea = document.createElement('textarea');
+    textArea.innerHTML = text;
+    return textArea.value;
+  }
+
   async getSettings() {
     return new Promise((resolve) => {
-      chrome.storage.sync.get([
-        'ai_platform', 
-        'ai_model', 
-        'new_tab', 
-        'notifications',
-        'custom_prompt',
-        'auto_send',
-        'analysis_type'
-      ], (result) => {
-        resolve(result);
-      });
+      try {
+        chrome.storage.sync.get([
+          'ai_platform',
+          'ai_model',
+          'new_tab',
+          'notifications',
+          'custom_prompt',
+          'auto_send',
+          'analysis_type'
+        ], (result) => {
+          if (chrome.runtime.lastError) {
+            console.log('⚠️ Storage error, using defaults');
+            resolve({});
+            return;
+          }
+          resolve(result);
+        });
+      } catch (error) {
+        console.log('⚠️ Storage unavailable, using defaults');
+        resolve({});
+      }
     });
   }
 
   createAIPrompt(transcript, videoTitle, videoUrl, platform, analysisType, settings) {
-    // Sprawdź czy jest custom prompt w ustawieniach
     if (settings.custom_prompt && settings.custom_prompt.trim()) {
       return settings.custom_prompt
         .replace(/\{title\}/g, videoTitle)
@@ -981,7 +1730,6 @@ class YouTubeTranscriptExtractor {
         .replace(/\{transcript\}/g, transcript);
     }
 
-    // Szablony promptów
     const templates = {
       summary: `Podsumuj tę transkrypcję z YouTube w języku polskim:
 
@@ -990,7 +1738,7 @@ class YouTubeTranscriptExtractor {
 
 **Stwórz podsumowanie zawierające:**
 1. **Główne tematy** - najważniejsze zagadnienia
-2. **Kluczowe informacje** - fakty, dane, wnioski  
+2. **Kluczowe informacje** - fakty, dane, wnioski
 3. **Praktyczne wskazówki** - konkretne rady (jeśli są)
 4. **Najważniejsze cytaty** - wartościowe stwierdzenia
 
@@ -1029,30 +1777,40 @@ ${transcript}`,
 **TRANSKRYPCJA:**
 ${transcript}`,
 
-      custom: transcript
+      custom: `Oto transkrypcja wideo YouTube:
+
+**Tytuł:** ${videoTitle}
+**URL:** ${videoUrl}
+
+**TRANSKRYPCJA:**
+${transcript}`
     };
 
     return templates[analysisType] || templates.summary;
   }
 
   setupMessageListener() {
-    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-      if (message.action === 'aiOpened') {
-        const platformName = message.platform === 'claude' ? 'Claude' : 'ChatGPT';
-        const sendStatus = message.autoSent ? 'wysłany automatycznie' : 'wklejony';
-        this.showNotification(`✅ ${platformName} otwarty - prompt ${sendStatus}!`, 'success');
-      } else if (message.action === 'showNotification') {
-        this.showNotification(message.message, message.type || 'info');
-      } else if (message.action === 'refreshButton') {
-        this.loadButtonSettings().then(() => {
-          const oldBtn = document.getElementById('transcript-summary-btn');
-          if (oldBtn) oldBtn.remove();
-          if (this.shouldAddButton()) {
-            this.addSummaryButton();
-          }
-        });
-      }
-    });
+    try {
+      chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+        if (message.action === 'aiOpened') {
+          const platformName = message.platform === 'claude' ? 'Claude' : 'ChatGPT';
+          const sendStatus = message.autoSent ? 'wysłany automatycznie' : 'wklejony';
+          this.showNotification(`✅ ${platformName} otwarty - prompt ${sendStatus}!`, 'success');
+        } else if (message.action === 'showNotification') {
+          this.showNotification(message.message, message.type || 'info');
+        } else if (message.action === 'refreshButton') {
+          this.loadButtonSettings().then(() => {
+            const oldBtn = document.getElementById('transcript-summary-btn');
+            if (oldBtn) oldBtn.remove();
+            if (this.shouldAddButton()) {
+              this.addSummaryButton();
+            }
+          });
+        }
+      });
+    } catch (error) {
+      console.log('⚠️ Message listener setup failed, but continuing...');
+    }
   }
 
   showNotification(message, type = 'info') {
@@ -1064,39 +1822,36 @@ ${transcript}`,
     };
 
     const notification = document.createElement('div');
+    notification.className = `youtube-ai-notification ${type}`;
     notification.style.cssText = `
       position: fixed !important;
-      top: 80px !important;
+      top: 150px !important;
       right: 20px !important;
       background: ${colors[type] || colors.info} !important;
       color: white !important;
       padding: 16px 24px !important;
       border-radius: 12px !important;
-      z-index: 999998 !important;
+      z-index: 100001 !important;
       font-family: "Roboto", Arial, sans-serif !important;
       font-size: 14px !important;
       font-weight: 500 !important;
       box-shadow: 0 8px 32px rgba(0,0,0,0.3) !important;
       max-width: 350px !important;
-      line-height: 1.4 !important;
-      animation: slideInScale 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+      line-height: 1.5 !important;
+      animation: slideInAndOut 5s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards !important;
       cursor: pointer !important;
-      border: 1px solid rgba(255,255,255,0.1) !important;
+      pointer-events: all !important;
     `;
     
+    // Dodaj style animacji jeśli nie istnieją
     if (!document.getElementById('yt-ai-notification-styles')) {
       const style = document.createElement('style');
       style.id = 'yt-ai-notification-styles';
       style.textContent = `
-        @keyframes slideInScale {
-          from { 
-            transform: translateX(100%) scale(0.8); 
-            opacity: 0; 
-          }
-          to { 
-            transform: translateX(0) scale(1); 
-            opacity: 1; 
-          }
+        @keyframes slideInAndOut {
+          0% { transform: translateX(110%); opacity: 0; }
+          15%, 85% { transform: translateX(0); opacity: 1; }
+          100% { transform: translateX(110%); opacity: 0; }
         }
       `;
       document.head.appendChild(style);
@@ -1106,11 +1861,12 @@ ${transcript}`,
     notification.addEventListener('click', () => notification.remove());
     document.body.appendChild(notification);
 
+    // Auto-remove po animacji
     setTimeout(() => {
       if (notification.parentNode) {
         notification.remove();
       }
-    }, 6000);
+    }, 5000);
   }
 
   setupNavigationListener() {
@@ -1122,21 +1878,22 @@ ${transcript}`,
         lastUrl = url;
         this.modalOpen = false;
         
-        // Usuń stary przycisk
+        console.log('🔄 Nawigacja YouTube:', url);
+        
         const oldButton = document.getElementById('transcript-summary-btn');
         if (oldButton) {
           oldButton.remove();
+          console.log('🗑️ Usunięto stary przycisk');
         }
         
-        // Usuń stary modal
         const oldPanel = document.getElementById('ai-model-panel');
         if (oldPanel) {
           oldPanel.remove();
         }
         
-        // Dodaj nowy przycisk po nawigacji
         setTimeout(() => {
           if (this.shouldAddButton()) {
+            console.log('➕ Dodaję przycisk po nawigacji');
             this.addSummaryButton();
           }
         }, 2000);
@@ -1154,7 +1911,6 @@ ${transcript}`,
     
     window.addEventListener('popstate', checkNavigation);
     
-    // Override pushState i replaceState
     const originalPushState = history.pushState;
     const originalReplaceState = history.replaceState;
     
@@ -1172,14 +1928,15 @@ ${transcript}`,
   }
 }
 
-// Inicjalizacja
+// INICJALIZACJA
 let extractor = null;
 
 function initExtractor() {
   if (!extractor) {
     try {
+      console.log('🚀 Inicjalizuję YouTubeTranscriptExtractor...');
       extractor = new YouTubeTranscriptExtractor();
-      console.log('🧠 ZT-Youtube Extension initialized successfully');
+      console.log('✅ ZT-Youtube Extension initialized successfully - REAL FIX VERSION');
     } catch (error) {
       console.error('❌ Błąd inicjalizacji ZT-Youtube:', error);
       setTimeout(initExtractor, 3000);
@@ -1187,16 +1944,27 @@ function initExtractor() {
   }
 }
 
+// Inicjalizacja przy różnych stanach DOM
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initExtractor);
 } else {
   initExtractor();
 }
 
+// Backup inicjalizacja
 setTimeout(() => {
   if (!extractor) {
+    console.log('🔄 Backup inicjalizacja...');
     initExtractor();
   }
 }, 3000);
 
-console.log('📦 ZT-Youtube Content Script Loaded - Production Version');
+// Dodatkowy backup dla YouTube SPA
+setTimeout(() => {
+  if (!document.getElementById('transcript-summary-btn') && window.location.href.includes('/watch')) {
+    console.log('🔄 Dodatkowy backup - wymuszam inicjalizację');
+    initExtractor();
+  }
+}, 5000);
+
+console.log('📦 ZT-Youtube Content Script Loaded - REAL FIX FOR POLISH SUBTITLES');
