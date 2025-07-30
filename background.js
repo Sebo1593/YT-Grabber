@@ -1,4 +1,4 @@
-// background.js - Ulepszona wersja z automatycznym wysyłaniem (Enter)
+// background.js - yTube-Ninja v1.0 with auto-send (Enter)
 class AIOpener {
   constructor() {
     this.setupMessageListener();
@@ -21,7 +21,7 @@ class AIOpener {
     try {
       const url = this.platformUrls[platform] || this.platformUrls.chatgpt;
       
-      console.log(`🚀 Otwieranie ${platform} z promptem (${prompt.length} znaków)${selectedModel ? ` - Model: ${selectedModel}` : ''}${autoSend ? ' - AUTO SEND' : ''}`);
+      console.log(`🚀 yTube-Ninja: Otwieranie ${platform} z promptem (${prompt.length} znaków)${selectedModel ? ` - Model: ${selectedModel}` : ''}${autoSend ? ' - AUTO SEND' : ''}`);
       
       const aiTab = await chrome.tabs.create({ url, active: true });
 
@@ -29,7 +29,7 @@ class AIOpener {
         if (tabId === aiTab.id && info.status === 'complete') {
           chrome.tabs.onUpdated.removeListener(listener);
           
-          console.log('⏳ Strona załadowana, wstrzykuję skrypt...');
+          console.log('⏳ yTube-Ninja: Strona załadowana, wstrzykuję skrypt...');
 
           chrome.scripting.executeScript({
             target: { tabId: aiTab.id },
@@ -37,30 +37,30 @@ class AIOpener {
             args: [prompt, platform, autoSend]
           }).then((results) => {
               if (chrome.runtime.lastError) {
-                console.error('❌ Błąd wstrzykiwania skryptu:', chrome.runtime.lastError.message);
+                console.error('❌ yTube-Ninja: Błąd wstrzykiwania skryptu:', chrome.runtime.lastError.message);
                 this.copyToClipboardFallback(prompt, sourceTabId, platform, autoSend);
                 return;
               }
 
               if (results && results[0] && results[0].result === true) {
-                console.log(`✅ Skrypt wstrzyknięty i ${autoSend ? 'wysłany automatycznie' : 'wklejony'} pomyślnie dla ${platform}`);
+                console.log(`✅ yTube-Ninja: Skrypt wstrzyknięty i ${autoSend ? 'wysłany automatycznie' : 'wklejony'} pomyślnie dla ${platform}`);
                 chrome.tabs.sendMessage(sourceTabId, {
                   action: 'aiOpened',
                   platform: platform,
                   autoSent: autoSend
-                }).catch(e => console.error("Błąd wysyłania powiadomienia:", e));
+                }).catch(e => console.error("yTube-Ninja: Błąd wysyłania powiadomienia:", e));
               } else {
-                console.warn(`⚠️ Wstrzyknięcie skryptu nie powiodło się dla ${platform}. Uruchamiam fallback.`);
+                console.warn(`⚠️ yTube-Ninja: Wstrzyknięcie skryptu nie powiodło się dla ${platform}. Uruchamiam fallback.`);
                 this.copyToClipboardFallback(prompt, sourceTabId, platform, autoSend);
               }
             }).catch(error => {
-              console.error(`❌ Błąd wykonania skryptu dla ${platform}:`, error);
+              console.error(`❌ yTube-Ninja: Błąd wykonania skryptu dla ${platform}:`, error);
               this.copyToClipboardFallback(prompt, sourceTabId, platform, autoSend);
             });
         }
       });
     } catch (error) {
-      console.error(`❌ Błąd podczas otwierania ${platform}:`, error);
+      console.error(`❌ yTube-Ninja: Błąd podczas otwierania ${platform}:`, error);
       this.copyToClipboardFallback(prompt, sourceTabId, platform, autoSend);
     }
   }
@@ -68,16 +68,16 @@ class AIOpener {
   async copyToClipboardFallback(prompt, sourceTabId, platform, autoSend) {
     try {
       const platformName = platform === 'claude' ? 'Claude' : 'ChatGPT';
-      console.log(`📋 Fallback: kopiuję prompt do schowka dla ${platformName}`);
+      console.log(`📋 yTube-Ninja: Fallback - kopiuję prompt do schowka dla ${platformName}`);
       
       const autoSendText = autoSend ? 'Auto-wysyłanie i wklejanie' : 'Auto-wklejanie';
       chrome.tabs.sendMessage(sourceTabId, {
         action: 'showNotification',
         message: `📋 ${autoSendText} nie powiodło się. Prompt skopiowany. Wklej ręcznie (Ctrl+V)${autoSend ? ' i naciśnij Enter.' : '.'}`,
         type: 'warning'
-      }).catch(e => console.error("Błąd wysyłania powiadomienia fallback:", e));
+      }).catch(e => console.error("yTube-Ninja: Błąd wysyłania powiadomienia fallback:", e));
     } catch (error) {
-      console.error('❌ Błąd w funkcji fallback:', error);
+      console.error('❌ yTube-Ninja: Błąd w funkcji fallback:', error);
     }
   }
 }
@@ -149,14 +149,14 @@ function injectorFunction(prompt, platform, autoSend = false) {
 
   async function sendMessage(textArea) {
     if (!autoSend) {
-      console.log('[Injector] Auto-send wyłączony, nie wysyłam automatycznie.');
+      console.log('[yTube-Ninja Injector] Auto-send wyłączony, nie wysyłam automatycznie.');
       return false;
     }
 
-    console.log('[Injector] 🚀 Próbuję automatycznie wysłać wiadomość...');
+    console.log('[yTube-Ninja Injector] 🚀 Próbuję automatycznie wysłać wiadomość...');
     
     // Metoda 1: Naciśnij Enter
-    console.log('[Injector] Próba 1: Wysyłanie przez Enter...');
+    console.log('[yTube-Ninja Injector] Próba 1: Wysyłanie przez Enter...');
     textArea.focus();
     
     // Spróbuj Ctrl+Enter (dla niektórych platform)
@@ -197,7 +197,7 @@ function injectorFunction(prompt, platform, autoSend = false) {
     await new Promise(resolve => setTimeout(resolve, 1000));
     
     // Metoda 2: Znajdź i kliknij przycisk Send
-    console.log('[Injector] Próba 2: Szukanie przycisku Send...');
+    console.log('[yTube-Ninja Injector] Próba 2: Szukanie przycisku Send...');
     
     const sendButtonSelectors = [
       // ChatGPT
@@ -224,7 +224,7 @@ function injectorFunction(prompt, platform, autoSend = false) {
     for (const selector of sendButtonSelectors) {
       const sendButton = document.querySelector(selector);
       if (sendButton && !sendButton.disabled && sendButton.offsetParent !== null) {
-        console.log('[Injector] ✅ Znaleziono przycisk Send, klikam:', selector);
+        console.log('[yTube-Ninja Injector] ✅ Znaleziono przycisk Send, klikam:', selector);
         
         // Kliknij przycisk
         sendButton.click();
@@ -241,7 +241,7 @@ function injectorFunction(prompt, platform, autoSend = false) {
     }
 
     // Metoda 3: Spróbuj znaleźć przycisk przez tekst
-    console.log('[Injector] Próba 3: Szukanie przez zawartość tekstu...');
+    console.log('[yTube-Ninja Injector] Próba 3: Szukanie przez zawartość tekstu...');
     const allButtons = document.querySelectorAll('button, [role="button"]');
     
     for (const button of allButtons) {
@@ -255,13 +255,13 @@ function injectorFunction(prompt, platform, autoSend = false) {
           !button.disabled && 
           button.offsetParent !== null) {
         
-        console.log('[Injector] ✅ Znaleziono przycisk przez tekst, klikam:', text || ariaLabel || title);
+        console.log('[yTube-Ninja Injector] ✅ Znaleziono przycisk przez tekst, klikam:', text || ariaLabel || title);
         button.click();
         return true;
       }
     }
 
-    console.log('[Injector] ⚠️ Nie udało się znaleźć przycisku Send lub Enter nie zadziałał.');
+    console.log('[yTube-Ninja Injector] ⚠️ Nie udało się znaleźć przycisku Send lub Enter nie zadziałał.');
     return false;
   }
 
@@ -283,11 +283,11 @@ function injectorFunction(prompt, platform, autoSend = false) {
 
     const selectors = platform === 'chatgpt' ? chatGPTSelectors : claudeSelectors;
     
-    console.log(`[Injector] Szukam pola tekstowego dla ${platform}...`);
+    console.log(`[yTube-Ninja Injector] Szukam pola tekstowego dla ${platform}...`);
     const textArea = await waitForElement(selectors);
 
     if (textArea) {
-      console.log('[Injector] ✅ Znaleziono pole tekstowe. Wklejam prompt.');
+      console.log('[yTube-Ninja Injector] ✅ Znaleziono pole tekstowe. Wklejam prompt.');
       pasteText(textArea, prompt);
       
       // Poczekaj chwilę na przetworzenie tekstu
@@ -297,15 +297,15 @@ function injectorFunction(prompt, platform, autoSend = false) {
       if (autoSend) {
         const sent = await sendMessage(textArea);
         if (sent) {
-          console.log('[Injector] ✅ Wiadomość wysłana automatycznie!');
+          console.log('[yTube-Ninja Injector] ✅ Wiadomość wysłana automatycznie!');
         } else {
-          console.log('[Injector] ⚠️ Auto-wysyłanie nie powiodło się, ale prompt został wklejony.');
+          console.log('[yTube-Ninja Injector] ⚠️ Auto-wysyłanie nie powiodło się, ale prompt został wklejony.');
         }
       }
 
       return true;
     } else {
-      console.error('[Injector] ❌ Nie znaleziono pola tekstowego.');
+      console.error('[yTube-Ninja Injector] ❌ Nie znaleziono pola tekstowego.');
       return false;
     }
   }
@@ -315,4 +315,4 @@ function injectorFunction(prompt, platform, autoSend = false) {
 
 // Inicjalizacja
 new AIOpener();
-console.log('✅ ZT-Youtube Background Script Loaded');
+console.log('✅ yTube-Ninja Background Script Loaded');

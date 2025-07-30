@@ -1,6 +1,6 @@
-// popup-script.js - Wersja z debugowaniem
+// popup-script.js - yTube-Ninja v1.0
 
-console.log('🚀 Popup script loaded');
+console.log('🚀 yTube-Ninja Popup script loaded');
 
 // Sprawdź czy elementy istnieją
 document.addEventListener('DOMContentLoaded', function() {
@@ -11,8 +11,11 @@ document.addEventListener('DOMContentLoaded', function() {
   const analysisTypeBtns = document.querySelectorAll('.analysis-type-btn');
   const modelSelection = document.getElementById('model-selection');
   const modelSelect = document.getElementById('model-select');
+  const buttonLocationSelect = document.getElementById('button-location');
+  const buttonThemeSelect = document.getElementById('button-theme');
   const buttonPositionSelect = document.getElementById('button-position');
   const buttonStyleSelect = document.getElementById('button-style');
+  const fixedPositionGroup = document.getElementById('fixed-position-group');
   const saveBtn = document.getElementById('save-btn');
   const statusMessage = document.getElementById('status-message');
   const customPrompt = document.getElementById('custom-prompt');
@@ -23,8 +26,11 @@ document.addEventListener('DOMContentLoaded', function() {
   console.log('- Analysis type buttons:', analysisTypeBtns.length);
   console.log('- Model selection:', !!modelSelection);
   console.log('- Model select:', !!modelSelect);
+  console.log('- Button location select:', !!buttonLocationSelect);
+  console.log('- Button theme select:', !!buttonThemeSelect);
   console.log('- Button position select:', !!buttonPositionSelect);
   console.log('- Button style select:', !!buttonStyleSelect);
+  console.log('- Fixed position group:', !!fixedPositionGroup);
   console.log('- Save button:', !!saveBtn);
   console.log('- Status message:', !!statusMessage);
   console.log('- Custom prompt:', !!customPrompt);
@@ -139,6 +145,9 @@ function setupEventListeners() {
   const analysisTypeBtns = document.querySelectorAll('.analysis-type-btn');
   const modelSelection = document.getElementById('model-selection');
   const modelSelect = document.getElementById('model-select');
+  const buttonLocationSelect = document.getElementById('button-location');
+  const buttonThemeSelect = document.getElementById('button-theme');
+  const fixedPositionGroup = document.getElementById('fixed-position-group');
   const saveBtn = document.getElementById('save-btn');
   const statusMessage = document.getElementById('status-message');
   const customPrompt = document.getElementById('custom-prompt');
@@ -175,6 +184,15 @@ function setupEventListeners() {
       btn.classList.add('active');
     });
   });
+
+  // Obsługa zmiany lokalizacji przycisku
+  if (buttonLocationSelect) {
+    console.log('📍 Setting up button location select');
+    buttonLocationSelect.addEventListener('change', function() {
+      console.log('📍 Button location changed:', buttonLocationSelect.value);
+      toggleFixedPositionGroup();
+    });
+  }
 
   // Obsługa toggles
   if (newTabToggle) {
@@ -241,9 +259,25 @@ function setupEventListeners() {
   console.log('✅ All event listeners set up');
 }
 
+// Funkcja do pokazywania/ukrywania opcji pozycji dla stałego przycisku
+function toggleFixedPositionGroup() {
+  const buttonLocationSelect = document.getElementById('button-location');
+  const fixedPositionGroup = document.getElementById('fixed-position-group');
+  
+  if (buttonLocationSelect && fixedPositionGroup) {
+    if (buttonLocationSelect.value === 'fixed') {
+      fixedPositionGroup.style.display = 'block';
+      console.log('👁️ Fixed position group shown');
+    } else {
+      fixedPositionGroup.style.display = 'none';
+      console.log('🙈 Fixed position group hidden');
+    }
+  }
+}
+
 // Ładowanie ustawień
 function loadSettings() {
-  console.log('📥 Loading settings...');
+  console.log('📥 Loading yTube-Ninja settings...');
   
   chrome.storage.sync.get([
     'ai_platform', 
@@ -253,14 +287,20 @@ function loadSettings() {
     'notifications',
     'auto_send',
     'custom_prompt',
+    'button_location',
+    'button_theme',
     'button_position',
     'button_style'
   ], function(result) {
-    console.log('📊 Loaded settings:', result);
+    console.log('📊 Loaded yTube-Ninja settings:', result);
     
     const platformBtns = document.querySelectorAll('.platform-btn');
     const analysisTypeBtns = document.querySelectorAll('.analysis-type-btn');
     const modelSelect = document.getElementById('model-select');
+    const buttonLocationSelect = document.getElementById('button-location');
+    const buttonThemeSelect = document.getElementById('button-theme');
+    const buttonPositionSelect = document.getElementById('button-position');
+    const buttonStyleSelect = document.getElementById('button-style');
     const customPrompt = document.getElementById('custom-prompt');
     const templateBtns = document.querySelectorAll('.template-btn');
     const newTabToggle = document.getElementById('new-tab-toggle');
@@ -314,6 +354,31 @@ function loadSettings() {
       console.log('🔧 Model set to:', modelSelect.value);
     }
     
+    // Lokalizacja przycisku
+    if (buttonLocationSelect) {
+      buttonLocationSelect.value = result.button_location || 'fixed';
+      console.log('📍 Button location set to:', buttonLocationSelect.value);
+      toggleFixedPositionGroup();
+    }
+
+    // Tema przycisku
+    if (buttonThemeSelect) {
+      buttonThemeSelect.value = result.button_theme || 'gradient';
+      console.log('🎨 Button theme set to:', buttonThemeSelect.value);
+    }
+    
+    // Pozycja przycisku (dla stałego)
+    if (buttonPositionSelect) {
+      buttonPositionSelect.value = result.button_position || 'middle-right';
+      console.log('📍 Button position set to:', buttonPositionSelect.value);
+    }
+
+    // Styl przycisku (kolor gradientu)
+    if (buttonStyleSelect) {
+      buttonStyleSelect.value = result.button_style || 'gradient';
+      console.log('🎨 Button style set to:', buttonStyleSelect.value);
+    }
+    
     // Toggles
     if (result.new_tab !== false && newTabToggle) {
       newTabToggle.classList.add('active');
@@ -326,16 +391,6 @@ function loadSettings() {
     if (result.auto_send !== false && autoSendToggle) {
       autoSendToggle.classList.add('active');
       console.log('✅ Auto send toggle activated');
-    }
-
-    if (buttonPositionSelect) {
-      buttonPositionSelect.value = result.button_position || 'middle-right';
-      console.log('📍 Button position set to:', buttonPositionSelect.value);
-    }
-
-    if (buttonStyleSelect) {
-      buttonStyleSelect.value = result.button_style || 'gradient';
-      console.log('🎨 Button style set to:', buttonStyleSelect.value);
     }
     
     // Custom prompt
@@ -380,7 +435,7 @@ function loadSettings() {
       }
     }
     
-    console.log('✅ Settings loaded successfully');
+    console.log('✅ yTube-Ninja settings loaded successfully');
   });
 }
 
@@ -433,17 +488,19 @@ function toggleSetting(toggle) {
 
 // Zapisywanie ustawień
 function saveSettings() {
-  console.log('💾 Saving settings...');
+  console.log('💾 Saving yTube-Ninja settings...');
   
   const platformBtns = document.querySelectorAll('.platform-btn');
   const analysisTypeBtns = document.querySelectorAll('.analysis-type-btn');
   const modelSelect = document.getElementById('model-select');
+  const buttonLocationSelect = document.getElementById('button-location');
+  const buttonThemeSelect = document.getElementById('button-theme');
+  const buttonPositionSelect = document.getElementById('button-position');
+  const buttonStyleSelect = document.getElementById('button-style');
   const customPrompt = document.getElementById('custom-prompt');
   const newTabToggle = document.getElementById('new-tab-toggle');
   const notificationsToggle = document.getElementById('notifications-toggle');
   const autoSendToggle = document.getElementById('auto-send-toggle');
-  const buttonPositionSelect = document.getElementById('button-position');
-  const buttonStyleSelect = document.getElementById('button-style');
   const saveBtn = document.getElementById('save-btn');
   const statusMessage = document.getElementById('status-message');
   
@@ -466,11 +523,13 @@ function saveSettings() {
     notifications: notificationsToggle ? notificationsToggle.classList.contains('active') : true,
     auto_send: autoSendToggle ? autoSendToggle.classList.contains('active') : true,
     custom_prompt: promptText,
+    button_location: buttonLocationSelect ? buttonLocationSelect.value : 'fixed',
+    button_theme: buttonThemeSelect ? buttonThemeSelect.value : 'gradient',
     button_position: buttonPositionSelect ? buttonPositionSelect.value : 'middle-right',
     button_style: buttonStyleSelect ? buttonStyleSelect.value : 'gradient'
   };
 
-  console.log('📊 Settings to save:', settings);
+  console.log('📊 yTube-Ninja settings to save:', settings);
 
   // Zablokuj przycisk podczas zapisywania
   if (saveBtn) {
@@ -486,10 +545,10 @@ function saveSettings() {
     }
     
     if (chrome.runtime.lastError) {
-      console.error('❌ Error saving settings:', chrome.runtime.lastError);
+      console.error('❌ Error saving yTube-Ninja settings:', chrome.runtime.lastError);
       showStatus('Błąd podczas zapisywania ustawień!', 'error');
     } else {
-      console.log('✅ Settings saved successfully');
+      console.log('✅ yTube-Ninja settings saved successfully');
       showStatus('✅ Ustawienia zostały zapisane!', 'success');
 
       // Powiadom zakładki YouTube o zmianie ustawień
@@ -518,7 +577,7 @@ function showStatus(message, type) {
   statusMessage.className = `status-message status-${type}`;
   statusMessage.style.display = 'block';
   
-  console.log(`📢 Status: ${message} (${type})`);
+  console.log(`📢 yTube-Ninja Status: ${message} (${type})`);
 }
 
-console.log('📦 Popup script setup completed');
+console.log('📦 yTube-Ninja Popup script setup completed');

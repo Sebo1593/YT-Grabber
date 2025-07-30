@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "ZT-Youtube",
-  "version": "2.1",
+  "name": "yTube-Ninja",
+  "version": "1.0",
   "description": "Analizuj transkrypcje z YouTube przy pomocy ChatGPT, Claude i innych platform AI",
   "permissions": [
     "activeTab",
@@ -26,7 +26,7 @@
   },
   "action": {
     "default_popup": "popup.html",
-    "default_title": "ZT-Youtube"
+    "default_title": "yTube-Ninja"
   },
   "icons": {
     "16": "icon16.png",

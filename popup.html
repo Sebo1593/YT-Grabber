@@ -3,21 +3,21 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ZT-Youtube</title>
+  <title>yTube-Ninja</title>
   <link rel="stylesheet" href="popup_styles.css">
 </head>
 <body>
   <div class="header">
     <h1>
-      🧠 ZT-Youtube
-      <span class="version">v2.1</span>
+      🥷 yTube-Ninja
+      <span class="version">v1.0</span>
     </h1>
     <p>Analizuj transkrypcje YouTube przy pomocy AI</p>
   </div>
 
   <div class="status-section">
     <h3>✅ Rozszerzenie aktywne</h3>
-    <p>Kliknij przycisk "Analizuj" w prawym górnym rogu YouTube, aby wysłać transkrypcję do wybranej platformy AI.</p>
+    <p>Kliknij przycisk "Analizuj" w YouTube, aby wysłać transkrypcję do wybranej platformy AI.</p>
   </div>
 
   <div class="settings-section">
@@ -79,9 +79,35 @@
   </div>
 
   <div class="settings-section">
-    <h3>🔧 Wygląd przycisku</h3>
+    <h3>📍 Lokalizacja przycisku</h3>
     <div class="form-group">
-      <label for="button-position">Pozycja przycisku:</label>
+      <label for="button-location">Gdzie wyświetlać przycisk:</label>
+      <select id="button-location">
+        <option value="fixed">Stały przycisk (zawsze widoczny)</option>
+        <option value="transcript">W panelu transkrypcji</option>
+        <option value="video-overlay">Nakładka na wideo</option>
+        <option value="description">W obszarze opisu</option>
+        <option value="player-controls">W kontrolkach odtwarzacza</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <h3>🎨 Wygląd przycisku</h3>
+    <div class="form-group">
+      <label for="button-theme">Styl przycisku:</label>
+      <select id="button-theme">
+        <option value="gradient">Gradient (domyślny)</option>
+        <option value="glassmorphism">Glassmorphism (szklisty)</option>
+        <option value="youtube-native">Natywny YouTube</option>
+        <option value="neon">Neon (świecący)</option>
+        <option value="minimal">Minimalistyczny</option>
+        <option value="animated">Animowany gradient</option>
+      </select>
+    </div>
+    
+    <div class="form-group" id="fixed-position-group">
+      <label for="button-position">Pozycja przycisku (tylko dla stałego):</label>
       <select id="button-position">
         <option value="top-right">Prawy górny róg</option>
         <option value="middle-right">Niżej po prawej</option>
@@ -91,10 +117,11 @@
         <option value="bottom-left">Lewy dolny róg</option>
       </select>
     </div>
+    
     <div class="form-group">
-      <label for="button-style">Styl przycisku:</label>
+      <label for="button-style">Kolor (dla gradientu):</label>
       <select id="button-style">
-        <option value="gradient">Gradient (domyślny)</option>
+        <option value="gradient">Fioletowy gradient</option>
         <option value="gray">Szary</option>
       </select>
     </div>
@@ -137,7 +164,7 @@
     <h3>📋 Jak używać:</h3>
     <ol>
       <li><strong>Otwórz wideo</strong> na YouTube z napisami</li>
-      <li><strong>Kliknij przycisk</strong> "Analizuj" w prawym górnym rogu</li>
+      <li><strong>Kliknij przycisk</strong> "Ninja AI" (lokalizacja zależy od ustawień)</li>
       <li><strong>Wybierz typ analizy</strong> (podsumowanie, analiza, punkty, własny)</li>
       <li><strong>Wybierz platformę</strong> AI (ChatGPT lub Claude)</li>
       <li><strong>Kliknij "Rozpocznij analizę"</strong></li>
@@ -146,7 +173,7 @@
   </div>
 
   <div class="footer">
-    <p>ZT-Youtube - Analizuj YouTube z AI</p>
+    <p>yTube-Ninja - Analizuj YouTube z AI</p>
   </div>
 
   <script src="popup_script.js"></script>

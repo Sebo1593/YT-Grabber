@@ -1,4 +1,4 @@
-/* styles.css - Dodatkowe style dla rozszerzenia YouTube to AI */
+/* styles.css - yTube-Ninja v1.0 */
 /* Style są głównie inline w content.js, ale można dodać tu dodatkowe */
 
 /* Dodatkowe style dla powiadomień */
@@ -8,35 +8,52 @@
 }
 
 /* Zapewnienie że przycisk nie będzie zasłonięty przez inne elementy */
-#transcript-summary-btn {
+#ytube-ninja-btn {
   pointer-events: all !important;
   user-select: none !important;
 }
 
-/* Dodatkowe animacje */
+/* Animacje dla różnych tematów przycisku */
 @keyframes pulse {
   0% { opacity: 1; }
   50% { opacity: 0.7; }
   100% { opacity: 1; }
 }
 
+@keyframes pulse-glow {
+  0%, 100% { 
+    box-shadow: 0 0 20px rgba(255, 107, 107, 0.5) !important;
+    transform: scale(1);
+  }
+  50% { 
+    box-shadow: 0 0 30px rgba(255, 107, 107, 0.8) !important;
+    transform: scale(1.02);
+  }
+}
+
+@keyframes gradient-flow {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
 /* Style dla różnych rozdzielczości */
 @media (max-width: 768px) {
-  #transcript-summary-btn {
+  #ytube-ninja-btn {
     padding: 10px 16px !important;
     font-size: 13px !important;
   }
 }
 
 @media (max-width: 480px) {
-  #transcript-summary-btn {
+  #ytube-ninja-btn {
     padding: 8px 12px !important;
     font-size: 12px !important;
     min-width: 100px !important;
   }
 }
-/* -- Dodane style dla powiadomień i animacji (Wersja 5.0) -- */
 
+/* Dodane style dla powiadomień i animacji (yTube-Ninja v1.0) */
 .youtube-ai-notification {
   position: fixed;
   top: 150px;
@@ -64,4 +81,113 @@
   0% { transform: translateX(110%); opacity: 0; }
   15%, 85% { transform: translateX(0); opacity: 1; }
   100% { transform: translateX(110%); opacity: 0; }
+}
+
+/* Style specyficzne dla różnych lokalizacji przycisku */
+
+/* Przycisk w panelu transkrypcji */
+#ytube-ninja-btn[data-location="transcript"] {
+  border-radius: 6px !important;
+  font-size: 13px !important;
+  padding: 8px 16px !important;
+}
+
+/* Przycisk w nakładce wideo */
+#ytube-ninja-btn[data-location="video-overlay"] {
+  border-radius: 50% !important;
+  width: 45px !important;
+  height: 45px !important;
+  font-size: 18px !important;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.3) !important;
+}
+
+/* Przycisk w opisie */
+#ytube-ninja-btn[data-location="description"] {
+  border-radius: 18px !important;
+  font-size: 13px !important;
+  padding: 8px 16px !important;
+}
+
+/* Przycisk w kontrolkach odtwarzacza */
+#ytube-ninja-btn[data-location="player-controls"] {
+  border-radius: 4px !important;
+  width: 48px !important;
+  height: 48px !important;
+  font-size: 16px !important;
+  margin: 0 4px !important;
+}
+
+/* Style dla różnych tematów */
+
+/* Glassmorphism theme */
+#ytube-ninja-btn[data-theme="glassmorphism"] {
+  background: rgba(255, 255, 255, 0.1) !important;
+  backdrop-filter: blur(10px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  color: white !important;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.5) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* YouTube Native theme */
+#ytube-ninja-btn[data-theme="youtube-native"] {
+  background: #0f0f0f !important;
+  color: #ffffff !important;
+  border: 1px solid #3c3c3c !important;
+  font-family: "YouTube Sans", "Roboto", sans-serif !important;
+  box-shadow: none !important;
+}
+
+/* Neon theme */
+#ytube-ninja-btn[data-theme="neon"] {
+  background: linear-gradient(45deg, #ff6b6b, #4ecdc4) !important;
+  color: white !important;
+  box-shadow: 0 0 20px rgba(255, 107, 107, 0.5) !important;
+  animation: pulse-glow 2s infinite !important;
+}
+
+/* Minimal theme */
+#ytube-ninja-btn[data-theme="minimal"] {
+  background: #ffffff !important;
+  color: #333333 !important;
+  border: 1px solid #e0e0e0 !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
+}
+
+/* Animated theme */
+#ytube-ninja-btn[data-theme="animated"] {
+  background: linear-gradient(270deg, #ff6b6b, #4ecdc4, #45b7d1, #96ceb4) !important;
+  background-size: 800% 800% !important;
+  animation: gradient-flow 4s ease infinite !important;
+  color: white !important;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.3) !important;
+}
+
+/* Dodatkowe style responsywne dla różnych lokalizacji */
+@media (max-width: 768px) {
+  #ytube-ninja-btn[data-location="video-overlay"] {
+    width: 40px !important;
+    height: 40px !important;
+    font-size: 16px !important;
+  }
+  
+  #ytube-ninja-btn[data-location="player-controls"] {
+    width: 40px !important;
+    height: 40px !important;
+    font-size: 14px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  #ytube-ninja-btn[data-location="transcript"],
+  #ytube-ninja-btn[data-location="description"] {
+    font-size: 12px !important;
+    padding: 6px 12px !important;
+  }
+  
+  #ytube-ninja-btn[data-location="video-overlay"] {
+    width: 35px !important;
+    height: 35px !important;
+    font-size: 14px !important;
+  }
 }

@@ -1,4 +1,4 @@
-// content.js - RZECZYWISTE ROZWIĄZANIE problemu polskich napisów automatycznych
+// content.js - yTube-Ninja v1.0 - RZECZYWISTE ROZWIĄZANIE problemu polskich napisów automatycznych
 class YouTubeTranscriptExtractor {
   constructor() {
     this.modalOpen = false;
@@ -10,19 +10,19 @@ class YouTubeTranscriptExtractor {
   }
 
   async init() {
-    console.log('🚀 Inicjalizuję ZT-Youtube...');
+    console.log('🥷 Inicjalizuję yTube-Ninja...');
     this.setupMessageListener();
     await this.loadButtonSettings();
     this.setupStorageListener();
     this.setupFullscreenListener();
     this.waitForPageLoad();
     this.setupNavigationListener();
-    console.log('✅ ZT-Youtube zainicjalizowany');
+    console.log('✅ yTube-Ninja zainicjalizowany');
   }
 
   waitForPageLoad() {
     const checkAndAdd = () => {
-      const hasButton = document.getElementById('transcript-summary-btn');
+      const hasButton = document.getElementById('ytube-ninja-btn');
       if (this.shouldAddButton() && !hasButton) {
         console.log('🔄 Dodaję przycisk...');
         setTimeout(() => this.addSummaryButton(), 1000);
@@ -53,7 +53,7 @@ class YouTubeTranscriptExtractor {
   async loadButtonSettings() {
     return new Promise((resolve) => {
       try {
-        chrome.storage.sync.get(['button_position', 'button_style'], (res) => {
+        chrome.storage.sync.get(['button_position', 'button_style', 'button_location', 'button_theme'], (res) => {
           if (chrome.runtime.lastError) {
             console.log('⚠️ Chrome storage error, używam domyślnych ustawień');
             resolve();
@@ -61,7 +61,14 @@ class YouTubeTranscriptExtractor {
           }
           this.buttonPosition = res.button_position || 'middle-right';
           this.buttonStyle = res.button_style || 'gradient';
-          console.log('⚙️ Ustawienia załadowane:', { position: this.buttonPosition, style: this.buttonStyle });
+          this.buttonLocation = res.button_location || 'fixed'; // fixed, transcript, video-overlay, description, player-controls
+          this.buttonTheme = res.button_theme || 'gradient'; // gradient, glassmorphism, youtube-native, neon, minimal, animated
+          console.log('⚙️ yTube-Ninja ustawienia:', { 
+            position: this.buttonPosition, 
+            style: this.buttonStyle,
+            location: this.buttonLocation,
+            theme: this.buttonTheme
+          });
           resolve();
         });
       } catch (error) {
@@ -74,15 +81,17 @@ class YouTubeTranscriptExtractor {
   setupStorageListener() {
     try {
       chrome.storage.onChanged.addListener((changes, area) => {
-        if (area === 'sync' && (changes.button_position || changes.button_style)) {
+        if (area === 'sync' && (changes.button_position || changes.button_style || changes.button_location || changes.button_theme)) {
           if (changes.button_position) this.buttonPosition = changes.button_position.newValue;
           if (changes.button_style) this.buttonStyle = changes.button_style.newValue;
+          if (changes.button_location) this.buttonLocation = changes.button_location.newValue;
+          if (changes.button_theme) this.buttonTheme = changes.button_theme.newValue;
           
-          const oldBtn = document.getElementById('transcript-summary-btn');
+          const oldBtn = document.getElementById('ytube-ninja-btn');
           if (oldBtn) oldBtn.remove();
           
           if (this.shouldAddButton()) {
-            this.addSummaryButton();
+            setTimeout(() => this.addSummaryButton(), 500);
           }
         }
       });
@@ -93,7 +102,7 @@ class YouTubeTranscriptExtractor {
 
   setupFullscreenListener() {
     document.addEventListener('fullscreenchange', () => {
-      const btn = document.getElementById('transcript-summary-btn');
+      const btn = document.getElementById('ytube-ninja-btn');
       if (!btn) return;
       
       if (document.fullscreenElement) {
@@ -123,25 +132,46 @@ class YouTubeTranscriptExtractor {
   }
 
   addSummaryButton() {
-    if (document.getElementById('transcript-summary-btn')) {
-      console.log('⚠️ Przycisk już istnieje, pomijam');
+    if (document.getElementById('ytube-ninja-btn')) {
+      console.log('⚠️ yTube-Ninja przycisk już istnieje, pomijam');
       return;
     }
 
-    console.log('✅ Dodaję przycisk Analizuj');
+    console.log('🥷 Dodaję yTube-Ninja przycisk');
 
+    // Wybierz metodę dodawania w zależności od lokalizacji
+    switch (this.buttonLocation) {
+      case 'transcript':
+        this.addTranscriptButton();
+        break;
+      case 'video-overlay':
+        this.addVideoOverlayButton();
+        break;
+      case 'description':
+        this.addDescriptionButton();
+        break;
+      case 'player-controls':
+        this.addPlayerControlsButton();
+        break;
+      case 'fixed':
+      default:
+        this.addFixedButton();
+        break;
+    }
+  }
+
+  addFixedButton() {
+    // Obecny przycisk fixed (zachowany bez zmian)
     const summaryButton = document.createElement('button');
-    summaryButton.id = 'transcript-summary-btn';
+    summaryButton.id = 'ytube-ninja-btn';
     summaryButton.innerHTML = `
-      <span style="font-size: 16px;">🧠</span>
-      <span>Analizuj</span>
+      <span style="font-size: 16px;">🥷</span>
+      <span>Ninja AI</span>
     `;
-    summaryButton.title = 'Analizuj wideo i wyślij do AI';
+    summaryButton.title = 'yTube-Ninja: Analizuj wideo AI';
     
     const positionStyles = this.getPositionStyles();
-    const baseBg = this.buttonStyle === 'gray'
-      ? '#6b7280'
-      : 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)';
+    const themeStyles = this.getThemeStyles();
 
     summaryButton.style.cssText = `
       position: fixed !important;
@@ -151,50 +181,285 @@ class YouTubeTranscriptExtractor {
       align-items: center !important;
       gap: 8px !important;
       padding: 12px 20px !important;
-      background: ${baseBg} !important;
-      color: white !important;
+      ${themeStyles}
       border: none !important;
       border-radius: 25px !important;
       font-size: 14px !important;
       font-weight: 600 !important;
       cursor: pointer !important;
-      box-shadow: 0 4px 20px rgba(79, 70, 229, 0.4) !important;
       font-family: "Roboto", Arial, sans-serif !important;
       transition: all 0.3s ease !important;
       min-width: 120px !important;
       justify-content: center !important;
-      backdrop-filter: blur(10px) !important;
-      border: 1px solid rgba(255,255,255,0.2) !important;
     `;
     
-    summaryButton.addEventListener('click', (e) => {
+    this.addButtonEvents(summaryButton);
+    document.body.appendChild(summaryButton);
+    console.log('✅ yTube-Ninja Fixed przycisk dodany');
+    
+    setTimeout(() => {
+      this.showNotification('🥷 yTube-Ninja jest gotowy!', 'success');
+    }, 500);
+  }
+
+  addTranscriptButton() {
+    // Przycisk w panelu transkrypcji
+    const transcriptPanel = document.querySelector('ytd-transcript-renderer') || 
+                           document.querySelector('#transcript') ||
+                           document.querySelector('[class*="transcript"]');
+    
+    if (!transcriptPanel) {
+      console.log('📝 Panel transkrypcji nie znaleziony, fallback do fixed');
+      this.addFixedButton();
+      return;
+    }
+
+    const container = document.createElement('div');
+    container.style.cssText = `
+      padding: 8px 12px;
+      border-bottom: 1px solid #e0e0e0;
+      background: #f9f9f9;
+    `;
+
+    const summaryButton = document.createElement('button');
+    summaryButton.id = 'ytube-ninja-btn';
+    summaryButton.innerHTML = `🥷 Ninja AI Analiza`;
+    summaryButton.title = 'yTube-Ninja: Analizuj transkrypcję';
+    
+    summaryButton.style.cssText = `
+      width: 100% !important;
+      padding: 8px 16px !important;
+      ${this.getThemeStyles()}
+      border: none !important;
+      border-radius: 6px !important;
+      font-size: 13px !important;
+      font-weight: 600 !important;
+      cursor: pointer !important;
+      transition: all 0.2s ease !important;
+    `;
+
+    this.addButtonEvents(summaryButton);
+    container.appendChild(summaryButton);
+    transcriptPanel.insertBefore(container, transcriptPanel.firstChild);
+    console.log('✅ yTube-Ninja Transcript przycisk dodany');
+  }
+
+  addVideoOverlayButton() {
+    // Przycisk overlay na wideo
+    const videoPlayer = document.querySelector('.html5-video-player') ||
+                       document.querySelector('#movie_player') ||
+                       document.querySelector('video');
+    
+    if (!videoPlayer) {
+      console.log('🎬 Player nie znaleziony, fallback do fixed');
+      this.addFixedButton();
+      return;
+    }
+
+    const overlay = document.createElement('div');
+    overlay.style.cssText = `
+      position: absolute !important;
+      top: 60px !important;
+      right: 20px !important;
+      z-index: 999999 !important;
+      opacity: 0 !important;
+      transition: opacity 0.3s ease !important;
+      pointer-events: none !important;
+    `;
+
+    const summaryButton = document.createElement('button');
+    summaryButton.id = 'ytube-ninja-btn';
+    summaryButton.innerHTML = `🥷`;
+    summaryButton.title = 'yTube-Ninja: Analizuj wideo';
+    
+    summaryButton.style.cssText = `
+      width: 45px !important;
+      height: 45px !important;
+      ${this.getThemeStyles()}
+      border: none !important;
+      border-radius: 50% !important;
+      font-size: 18px !important;
+      cursor: pointer !important;
+      transition: all 0.3s ease !important;
+      pointer-events: all !important;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.3) !important;
+    `;
+
+    this.addButtonEvents(summaryButton);
+    overlay.appendChild(summaryButton);
+    videoPlayer.appendChild(overlay);
+
+    // Pokaż przy hover nad playerem
+    videoPlayer.addEventListener('mouseenter', () => {
+      overlay.style.opacity = '1';
+    });
+    videoPlayer.addEventListener('mouseleave', () => {
+      overlay.style.opacity = '0';
+    });
+
+    console.log('✅ yTube-Ninja Video Overlay przycisk dodany');
+  }
+
+  addDescriptionButton() {
+    // Przycisk w obszarze opisu
+    const descriptionArea = document.querySelector('#meta-contents') ||
+                           document.querySelector('#info-contents') ||
+                           document.querySelector('ytd-video-secondary-info-renderer');
+    
+    if (!descriptionArea) {
+      console.log('📊 Obszar opisu nie znaleziony, fallback do fixed');
+      this.addFixedButton();
+      return;
+    }
+
+    const buttonContainer = document.createElement('div');
+    buttonContainer.style.cssText = `
+      margin: 12px 0;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    `;
+
+    const summaryButton = document.createElement('button');
+    summaryButton.id = 'ytube-ninja-btn';
+    summaryButton.innerHTML = `🥷 Ninja AI`;
+    summaryButton.title = 'yTube-Ninja: Analizuj wideo';
+    
+    summaryButton.style.cssText = `
+      padding: 8px 16px !important;
+      ${this.getThemeStyles()}
+      border: none !important;
+      border-radius: 18px !important;
+      font-size: 13px !important;
+      font-weight: 600 !important;
+      cursor: pointer !important;
+      transition: all 0.2s ease !important;
+    `;
+
+    this.addButtonEvents(summaryButton);
+    buttonContainer.appendChild(summaryButton);
+    descriptionArea.insertBefore(buttonContainer, descriptionArea.firstChild);
+    console.log('✅ yTube-Ninja Description przycisk dodany');
+  }
+
+  addPlayerControlsButton() {
+    // Przycisk w kontrolkach odtwarzacza
+    const controls = document.querySelector('.ytp-right-controls') ||
+                    document.querySelector('.ytp-chrome-controls');
+    
+    if (!controls) {
+      console.log('🎮 Kontrolki nie znalezione, fallback do fixed');
+      this.addFixedButton();
+      return;
+    }
+
+    const summaryButton = document.createElement('button');
+    summaryButton.id = 'ytube-ninja-btn';
+    summaryButton.innerHTML = `🥷`;
+    summaryButton.title = 'yTube-Ninja: Analizuj wideo';
+    summaryButton.className = 'ytp-button';
+    
+    summaryButton.style.cssText = `
+      width: 48px !important;
+      height: 48px !important;
+      ${this.getThemeStyles()}
+      border: none !important;
+      border-radius: 4px !important;
+      font-size: 16px !important;
+      cursor: pointer !important;
+      transition: all 0.2s ease !important;
+      margin: 0 4px !important;
+    `;
+
+    this.addButtonEvents(summaryButton);
+    controls.insertBefore(summaryButton, controls.firstChild);
+    console.log('✅ yTube-Ninja Player Controls przycisk dodany');
+  }
+
+  getThemeStyles() {
+    switch (this.buttonTheme) {
+      case 'glassmorphism':
+        return `
+          background: rgba(255, 255, 255, 0.1) !important;
+          backdrop-filter: blur(10px) !important;
+          border: 1px solid rgba(255, 255, 255, 0.2) !important;
+          color: white !important;
+          text-shadow: 0 1px 3px rgba(0,0,0,0.5) !important;
+          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1) !important;
+        `;
+      
+      case 'youtube-native':
+        return `
+          background: #0f0f0f !important;
+          color: #ffffff !important;
+          border: 1px solid #3c3c3c !important;
+          font-family: "YouTube Sans", "Roboto", sans-serif !important;
+          box-shadow: none !important;
+        `;
+      
+      case 'neon':
+        return `
+          background: linear-gradient(45deg, #ff6b6b, #4ecdc4) !important;
+          color: white !important;
+          box-shadow: 0 0 20px rgba(255, 107, 107, 0.5) !important;
+          animation: pulse-glow 2s infinite !important;
+        `;
+      
+      case 'minimal':
+        return `
+          background: #ffffff !important;
+          color: #333333 !important;
+          border: 1px solid #e0e0e0 !important;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
+        `;
+      
+      case 'animated':
+        return `
+          background: linear-gradient(270deg, #ff6b6b, #4ecdc4, #45b7d1, #96ceb4) !important;
+          background-size: 800% 800% !important;
+          animation: gradient-flow 4s ease infinite !important;
+          color: white !important;
+          text-shadow: 0 1px 3px rgba(0,0,0,0.3) !important;
+        `;
+      
+      case 'gradient':
+      default:
+        return `
+          background: ${this.buttonStyle === 'gray' ? '#6b7280' : 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)'} !important;
+          color: white !important;
+          box-shadow: 0 4px 20px rgba(79, 70, 229, 0.4) !important;
+        `;
+    }
+  }
+
+  addButtonEvents(button) {
+    button.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      console.log('🖱️ Przycisk kliknięty');
+      console.log('🥷 yTube-Ninja przycisk kliknięty');
       this.showModelSelection();
     });
     
     // Hover effects
-    summaryButton.addEventListener('mouseenter', () => {
-      summaryButton.style.transform = 'translateY(-2px) scale(1.05)';
-      summaryButton.style.boxShadow = '0 8px 30px rgba(79, 70, 229, 0.6)';
-      summaryButton.style.background = this.buttonStyle === 'gray'
-        ? '#4b5563'
-        : 'linear-gradient(135deg, #5b21b6 0%, #8b5cf6 100%)';
+    button.addEventListener('mouseenter', () => {
+      if (this.buttonTheme === 'gradient') {
+        button.style.transform = 'translateY(-2px) scale(1.05)';
+        button.style.boxShadow = '0 8px 30px rgba(79, 70, 229, 0.6)';
+        button.style.background = this.buttonStyle === 'gray'
+          ? '#4b5563'
+          : 'linear-gradient(135deg, #5b21b6 0%, #8b5cf6 100%)';
+      } else {
+        button.style.transform = 'translateY(-2px) scale(1.05)';
+      }
     });
 
-    summaryButton.addEventListener('mouseleave', () => {
-      summaryButton.style.transform = 'translateY(0) scale(1)';
-      summaryButton.style.boxShadow = '0 4px 20px rgba(79, 70, 229, 0.4)';
-      summaryButton.style.background = baseBg;
+    button.addEventListener('mouseleave', () => {
+      button.style.transform = 'translateY(0) scale(1)';
+      if (this.buttonTheme === 'gradient') {
+        button.style.boxShadow = '0 4px 20px rgba(79, 70, 229, 0.4)';
+        button.style.background = this.buttonStyle === 'gray' ? '#6b7280' : 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)';
+      }
     });
-    
-    document.body.appendChild(summaryButton);
-    console.log('✅ Przycisk dodany do DOM');
-    
-    setTimeout(() => {
-      this.showNotification('🎯 Przycisk "Analizuj" jest gotowy!', 'success');
-    }, 500);
   }
 
   showModelSelection() {
@@ -267,7 +532,7 @@ class YouTubeTranscriptExtractor {
       <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px;">
         <div>
           <h3 style="margin: 0; color: #333; font-size: 20px; display: flex; align-items: center; gap: 8px;">
-            🧠 ZT-Youtube AI
+            🥷 yTube-Ninja AI
           </h3>
           <p style="margin: 8px 0 0 0; color: #666; font-size: 14px;">Wybierz platformę i typ analizy</p>
         </div>
@@ -1800,7 +2065,7 @@ ${transcript}`
           this.showNotification(message.message, message.type || 'info');
         } else if (message.action === 'refreshButton') {
           this.loadButtonSettings().then(() => {
-            const oldBtn = document.getElementById('transcript-summary-btn');
+            const oldBtn = document.getElementById('ytube-ninja-btn');
             if (oldBtn) oldBtn.remove();
             if (this.shouldAddButton()) {
               this.addSummaryButton();
@@ -1880,10 +2145,10 @@ ${transcript}`
         
         console.log('🔄 Nawigacja YouTube:', url);
         
-        const oldButton = document.getElementById('transcript-summary-btn');
+        const oldButton = document.getElementById('ytube-ninja-btn');
         if (oldButton) {
           oldButton.remove();
-          console.log('🗑️ Usunięto stary przycisk');
+          console.log('🗑️ Usunięto stary yTube-Ninja przycisk');
         }
         
         const oldPanel = document.getElementById('ai-model-panel');
@@ -1934,11 +2199,11 @@ let extractor = null;
 function initExtractor() {
   if (!extractor) {
     try {
-      console.log('🚀 Inicjalizuję YouTubeTranscriptExtractor...');
+      console.log('🥷 Inicjalizuję YouTubeTranscriptExtractor...');
       extractor = new YouTubeTranscriptExtractor();
-      console.log('✅ ZT-Youtube Extension initialized successfully - REAL FIX VERSION');
+      console.log('✅ yTube-Ninja Extension initialized successfully - REAL FIX VERSION');
     } catch (error) {
-      console.error('❌ Błąd inicjalizacji ZT-Youtube:', error);
+      console.error('❌ Błąd inicjalizacji yTube-Ninja:', error);
       setTimeout(initExtractor, 3000);
     }
   }
@@ -1961,10 +2226,10 @@ setTimeout(() => {
 
 // Dodatkowy backup dla YouTube SPA
 setTimeout(() => {
-  if (!document.getElementById('transcript-summary-btn') && window.location.href.includes('/watch')) {
-    console.log('🔄 Dodatkowy backup - wymuszam inicjalizację');
+  if (!document.getElementById('ytube-ninja-btn') && window.location.href.includes('/watch')) {
+    console.log('🔄 Dodatkowy backup - wymuszam inicjalizację yTube-Ninja');
     initExtractor();
   }
 }, 5000);
 
-console.log('📦 ZT-Youtube Content Script Loaded - REAL FIX FOR POLISH SUBTITLES');
+console.log('🥷 yTube-Ninja Content Script Loaded - MULTIPLE POSITIONS & THEMES');
